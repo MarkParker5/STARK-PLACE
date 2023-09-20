@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stark-place"
-version = "1.0.0"
+version = "1.0.1"
 description = "S.T.A.R.K. Platform Library And Community Extensions"
 authors = ["Mark Parker <mark@parker-programs.com>"]
 license = "CC BY-NC-SA 4.0"
