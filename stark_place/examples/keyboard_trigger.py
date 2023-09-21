@@ -1,3 +1,8 @@
+'''
+Requirements except stark:
+    - pynput
+'''
+
 import asyncer
 from stark import CommandsContext, CommandsManager, Response
 from stark.general.blockage_detector import BlockageDetector
@@ -7,13 +12,14 @@ from stark.interfaces.silero import SileroSpeechSynthesizer
 from stark.voice_assistant import VoiceAssistant, Mode
 
 from stark_place.triggers import keyboard_key # import the trigger
+from stark_place.notifications import sound
 
 
-VOSK_MODEL_URL = "YOUR_CHOSEN_VOSK_MODEL_URL"
-SILERO_MODEL_URL = "YOUR_CHOSEN_SILERO_MODEL_URL"
+vosk_model_ur = 'YOUR_CHOSEN_VOSK_MODEL_URL'
+silero_model_ur = 'YOUR_CHOSEN_SILERO_MODEL_URL'
 
-recognizer = VoskSpeechRecognizer(model_url=VOSK_MODEL_URL)
-synthesizer = SileroSpeechSynthesizer(model_url=SILERO_MODEL_URL)
+recognizer = VoskSpeechRecognizer(model_url=vosk_model_ur)
+synthesizer = SileroSpeechSynthesizer(model_url=silero_model_ur)
 
 manager = CommandsManager()
 
@@ -42,7 +48,11 @@ async def run(
 
         voice_assistant.mode = Mode.external() # stop listening after first response
         
-        main_task_group.soonify(keyboard_key.start)(main_task_group.soonify(speech_recognizer.start_listening)) # add trigger to the main loop
+        def on_hotkey():
+            sound.play() # optional: play a sound when the hotkey is pressed, check the realisation in stark_place/notifications/sound.py
+            main_task_group.soonify(speech_recognizer.start_listening)
+        
+        main_task_group.soonify(keyboard_key.start)(on_hotkey) # add trigger to the main loop
         # main_task_group.soonify(speech_recognizer.start_listening)() # don't start listening until the hotkey is pressed
         main_task_group.soonify(context.handle_responses)()
 

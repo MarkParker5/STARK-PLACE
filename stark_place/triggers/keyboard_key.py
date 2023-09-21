@@ -1,8 +1,6 @@
 from typing import Callable, Any
-import os
-from pynput.keyboard import Key, KeyCode, Listener, HotKey
+from pynput.keyboard import Key, KeyCode, Listener
 import anyio
-from asyncer import asyncify
 from threading import Event
 
 
@@ -19,22 +17,10 @@ async def start(callback: Callable[[], Any | None]):
     listener.start() # start listening in a separate thread
     
     while True: # this loop runs in the main thread
-        
         await anyio.sleep(0.1) # release the thread for other tasks
         
-        if hotkey_event.is_set():
-            '''
-            optional: play a sound to indicate that the hotkey was pressed
-            
-            play all sounds in macos using shell: sh`for s in /System/Library/Sounds/*; do echo "$s" && afplay "$s"; done`
-            for linux: check the `/usr/share/sounds/` directory and use `aplay` instead of `afplay`
-            
-            as an alternative, you can use the system-sounds pypi library to list and play sounds
-            pypi.org/project/system-sounds
-            or github.com/MarkParker5/system-sounds
-            
-            or use the a SpeechSynthesizer to say something like "Yes, sir?"
-            '''
-            os.system('afplay /System/Library/Sounds/Blow.aiff &') # play the sound in the background (macos)
-            callback()
-            hotkey_event.clear()
+        if not hotkey_event.is_set(): 
+            continue
+        
+        callback()
+        hotkey_event.clear()

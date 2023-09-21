@@ -6,11 +6,11 @@ from stark.interfaces.vosk import VoskSpeechRecognizer
 from stark.interfaces.silero import SileroSpeechSynthesizer
 
 
-VOSK_MODEL_URL = "YOUR_CHOSEN_VOSK_MODEL_URL"
-SILERO_MODEL_URL = "YOUR_CHOSEN_SILERO_MODEL_URL"
+vosk_model_ur = 'YOUR_CHOSEN_VOSK_MODEL_URL'
+silero_model_ur = 'YOUR_CHOSEN_SILERO_MODEL_URL'
 
-recognizer = VoskSpeechRecognizer(model_url=VOSK_MODEL_URL)
-synthesizer = SileroSpeechSynthesizer(model_url=SILERO_MODEL_URL)
+recognizer = VoskSpeechRecognizer(model_url=vosk_model_ur)
+synthesizer = SileroSpeechSynthesizer(model_url=silero_model_ur)
 
 manager = CommandsManager()
 
