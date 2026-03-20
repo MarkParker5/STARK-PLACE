@@ -1,4 +1,4 @@
-'''
+"""
 Combined one-shot search + parsing processor.
 
 Identifies the matching command(s) and extracts all typed parameters in a single LLM call.
@@ -19,7 +19,8 @@ Trade-offs:
 
 Pipeline role — same three placements as the two-step option apply here; see its docstring for details.
 A two-step alternative is also available — definitely worth comparing, as both approaches have trade-offs.
-'''
+"""
+
 from __future__ import annotations
 
 import inspect
@@ -30,7 +31,6 @@ from typing import TYPE_CHECKING, override
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-
 from stark.core.command import Command
 from stark.core.commands_context_processor import CommandsContextLayer, CommandsContextProcessor, RecognizedEntity
 from stark.core.commands_manager import SearchResult
@@ -49,6 +49,7 @@ os.environ.setdefault("OLLAMA_API_KEY", "1234")
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class _Deps:
     command_infos: list[CommandInfo]
@@ -58,7 +59,9 @@ class _Deps:
 
 class ParsedParameter(BaseModel):
     name: str = Field(description="Parameter name as declared in the command signature")
-    value: str = Field(description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'")
+    value: str = Field(
+        description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'"
+    )
 
 
 class _ParsedCommand(BaseModel):
@@ -110,9 +113,11 @@ async def _inject_recognized_entities(ctx) -> str:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
     """Collect TypeInfo for all unique Object subclass parameter types across commands."""
     from stark.core.types import Object
+
     seen: set[str] = set()
     result: list[TypeInfo] = []
     for cmd in commands:
@@ -130,6 +135,7 @@ def _instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) 
     Every declared Object parameter is present in the result; None if not parsed.
     """
     from stark.core.types import Object
+
     parsed_by_name = {p.name: p.value for p in parsed_params}
     result: dict[str, object] = {}
     for param_name, param_type in cmd._runner.__annotations__.items():
@@ -199,8 +205,8 @@ def _resolve_overlaps(results: list[SearchResult]) -> list[SearchResult]:
 
 # ── Processor ─────────────────────────────────────────────────────────────────
 
-class OneShotLLMProcessor(CommandsContextProcessor):
 
+class OneStepLLMProcessor(CommandsContextProcessor):
     @override
     async def process_context_layer(
         self,
