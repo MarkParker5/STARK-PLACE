@@ -1,4 +1,4 @@
-'''
+"""
 Experimental two-step search + parsing processor.
 
 Splits the search processor task into two sequential LLM calls:
@@ -21,23 +21,26 @@ Pipeline role — three valid placements (always after NER pre-processors, befor
     This is often the most practical setup: fast and precise patterns where they work, LLM as a capable fallback where they don't.
 
 A one-shot alternative is also available — definitely worth comparing, as both approaches have trade-offs.
-'''
+"""
+
 from __future__ import annotations
 
 import inspect
 import logging
-import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-
 from stark.core.command import Command
 from stark.core.commands_context_processor import CommandsContextLayer, CommandsContextProcessor, RecognizedEntity
 from stark.core.commands_manager import SearchResult
 from stark.core.parsing import MatchResult
 from stark.general.json_encoder import CommandInfo, TypeInfo
+
+from ready import agent_defaults
+
+from .dev_raise import dev_raise
 
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
@@ -45,11 +48,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1")
-os.environ.setdefault("OLLAMA_API_KEY", "1234")
-
 
 # ── Step 1: Search ────────────────────────────────────────────────────────────
+
 
 @dataclass
 class _SearchDeps:
@@ -65,13 +66,17 @@ class _CommandMatch(BaseModel):
 type _CommandMatches = list[_CommandMatch]
 
 _search_agent: Agent[_SearchDeps, _CommandMatches] = Agent(
-    "llama-3.2-3b-instruct:q4_k_m",
+    model=agent_defaults.MODEL_NAME,
     deps_type=_SearchDeps,
     output_type=_CommandMatches,
     instructions=(
         "You are the command search component of a natural language voice assistant. "
         "Given the user's input, find the most relevant command(s) — none, one, or several. "
         "Return only the command name and the exact substring of the input that triggered it."
+        "Matched substrings must not overlap across commands. "
+        "Each match must be an uninterrupted substring of the original input."
+        "Only return matches you are confident about."
+        "Your are only allowed to output valid JSON tool calls. Whenever you want to present a final answer use one of the final_result tools available to you, never answer with plain text."
     ),
 )
 
@@ -84,6 +89,7 @@ async def _inject_commands(ctx) -> str:
 
 # ── Step 2: Parse ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class _ParseDeps:
     command_info: CommandInfo
@@ -94,13 +100,15 @@ class _ParseDeps:
 
 class ParsedParameter(BaseModel):
     name: str = Field(description="Parameter name as declared in the command signature")
-    value: str = Field(description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'")
+    value: str = Field(
+        description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'"
+    )
 
 
 type _ParsedParameters = list[ParsedParameter]
 
 _parse_agent: Agent[_ParseDeps, _ParsedParameters] = Agent(
-    "llama-3.2-3b-instruct:q4_k_m",
+    model=agent_defaults.MODEL_NAME,
     deps_type=_ParseDeps,
     output_type=_ParsedParameters,
     instructions=(
@@ -118,21 +126,25 @@ _parse_agent: Agent[_ParseDeps, _ParsedParameters] = Agent(
 async def _inject_command_and_types(ctx) -> str:
     parts = [
         f"Matched command: {ctx.deps.command_info.as_text()}",
-        f"Matched part of the input: \"{ctx.deps.matched_substring}\"",
+        f'Matched part of the input: "{ctx.deps.matched_substring}"',
     ]
     if ctx.deps.type_infos:
         parts.append("Parameter types:\n" + "\n".join(f"- {t.as_text()}" for t in ctx.deps.type_infos))
     if ctx.deps.recognized_entities:
         hints = "\n".join(f"- {e.substring!r} → {e.type.__name__}" for e in ctx.deps.recognized_entities)
-        parts.append(f"Pre-identified named entities (from upstream NER layer — informational, you may override if your understanding of the full input differs):\n{hints}")
+        parts.append(
+            f"Pre-identified named entities (from upstream NER layer — informational, you may override if your understanding of the full input differs):\n{hints}"
+        )
     return "\n\n".join(parts)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
     """Collect TypeInfo for all unique Object subclass parameter types across commands."""
     from stark.core.types import Object
+
     seen: set[str] = set()
     result: list[TypeInfo] = []
     for cmd in commands:
@@ -150,6 +162,7 @@ def _instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) 
     Every declared Object parameter is present in the result; None if not parsed.
     """
     from stark.core.types import Object
+
     parsed_by_name = {p.name: p.value for p in parsed_params}
     result: dict[str, object] = {}
     for param_name, param_type in cmd._runner.__annotations__.items():
@@ -161,7 +174,7 @@ def _instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) 
         try:
             result[param_name] = param_type(parsed_by_name[param_name])
         except Exception as e:
-            logger.warning(f"Failed to instantiate {param_type.__name__} for param '{param_name}': {e}")
+            dev_raise(f"Failed to instantiate {param_type.__name__} for param '{param_name}'", e)
             result[param_name] = None
     return result
 
@@ -219,8 +232,8 @@ def _resolve_overlaps(results: list[SearchResult]) -> list[SearchResult]:
 
 # ── Processor ─────────────────────────────────────────────────────────────────
 
-class TwoStepLLMProcessor(CommandsContextProcessor):
 
+class TwoStepLLMProcessor(CommandsContextProcessor):
     @override
     async def process_context_layer(
         self,
@@ -243,7 +256,7 @@ class TwoStepLLMProcessor(CommandsContextProcessor):
                 deps=_SearchDeps(command_infos=command_infos),
             )
         except Exception as e:
-            logger.warning(f"TwoStep LLM search failed: {e}")
+            dev_raise(f"TwoStep LLM search failed: {e}")
             return []
 
         results: list[SearchResult] = []
@@ -251,10 +264,10 @@ class TwoStepLLMProcessor(CommandsContextProcessor):
         for match in search_response.output:
             cmd = cmd_by_name.get(match.command_name)
             if cmd is None:
-                logger.warning(f"LLM search returned unknown command: {match.command_name!r}")
+                dev_raise(f"LLM search returned unknown command: {match.command_name!r}")
                 continue
             if match.substring not in string:
-                logger.warning(f"LLM search returned substring not in input: {match.substring!r}")
+                dev_raise(f"LLM search returned substring not in input: {match.substring!r}")
                 continue
 
             # Step 2: parse against the full input — LLM uses whole-sentence context
@@ -287,6 +300,8 @@ class TwoStepLLMProcessor(CommandsContextProcessor):
         type_infos = _collect_type_infos([cmd])
         if not type_infos:
             return {}
+
+        logger.debug(f"LLM TwoStep: string={full_input!r}")
         try:
             response = await _parse_agent.run(
                 full_input,
@@ -298,6 +313,6 @@ class TwoStepLLMProcessor(CommandsContextProcessor):
                 ),
             )
         except Exception as e:
-            logger.warning(f"TwoStep LLM parse failed for '{cmd.name}': {e}")
+            dev_raise(f"TwoStep LLM parse failed for '{cmd.name}': {e}")
             return {}
         return _instantiate_parameters(cmd, response.output)

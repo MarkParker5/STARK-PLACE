@@ -115,10 +115,10 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, override
+from uuid import UUID, uuid4
 
 from pydantic_ai import Agent, FunctionToolset, RunContext
 from pydantic_ai.messages import ModelMessage, UserPromptPart
@@ -130,17 +130,15 @@ from stark.core.parsing import MatchResult
 from stark.core.patterns import Pattern
 from stark.general.json_encoder import CommandInfo, TypeInfo
 
+from ready import agent_defaults
+
+from .dev_raise import dev_raise
+
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
 
 
 logger = logging.getLogger(__name__)
-
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1")
-os.environ.setdefault("OLLAMA_API_KEY", "1234")
-
-# Model must support tool/function calling.
-_MODEL = "llama-3.3-70b-instruct:q4_k_m"
 
 
 # ── Supervisor ────────────────────────────────────────────────────────────────
@@ -148,6 +146,7 @@ _MODEL = "llama-3.3-70b-instruct:q4_k_m"
 
 @dataclass
 class ProgressUpdate:
+    run_id: UUID
     command_name: str
     message: str
 
@@ -158,33 +157,67 @@ class AgenticLoopSupervisor:
 
     LLM generations are serialised via asyncio.Lock — only one runs at a time.
     Background command runners are never blocked.
-    Injected messages are drained at each iteration boundary and folded into
-    the next LLM call's context.
-    Progress updates are pushed by tasks; the supervisor relays them to the
-    registered observer callback.
+
+    Each call to process_string produces a unique run_id. Injections and
+    progress observers are scoped to that run_id so concurrent runs never
+    bleed into each other.
+
+    Lifecycle (called by AgenticLoopProcessor):
+        run_id = supervisor.register_run()     # allocate per-run state
+        ...
+        supervisor.unregister_run(run_id)      # release per-run state
+
+    External callers (UI, other commands):
+        supervisor.inject(run_id, message)
+        supervisor.set_progress_observer(run_id, cb)
     """
 
     _llm_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    _injection_queue: asyncio.Queue[str] = field(default_factory=asyncio.Queue)
-    _progress_observer: Callable[[ProgressUpdate], None] | None = None
+    _injection_queues: dict[UUID, asyncio.Queue[str]] = field(default_factory=dict)
+    _progress_observers: dict[UUID, Callable[[ProgressUpdate], None]] = field(default_factory=dict)
 
-    def set_progress_observer(self, cb: Callable[[ProgressUpdate], None]) -> None:
-        self._progress_observer = cb
+    # ── Run lifecycle ─────────────────────────────────────────────────────────
 
-    def report_progress(self, update: ProgressUpdate) -> None:
-        if self._progress_observer:
-            self._progress_observer(update)
+    def register_run(self) -> UUID:
+        """Allocate per-run state and return the new run_id."""
+        run_id = uuid4()
+        self._injection_queues[run_id] = asyncio.Queue()
+        return run_id
 
-    def inject(self, message: str) -> None:
-        """Inject a message into the running loop (between tool calls)."""
-        self._injection_queue.put_nowait(message)
+    def unregister_run(self, run_id: UUID) -> None:
+        """Release per-run state. Safe to call even if run_id is unknown."""
+        self._injection_queues.pop(run_id, None)
+        self._progress_observers.pop(run_id, None)
 
-    def drain_injections(self) -> list[str]:
-        """Drain all pending injected messages. Called at each iteration boundary."""
+    # ── Per-run API ───────────────────────────────────────────────────────────
+
+    def set_progress_observer(self, run_id: UUID, cb: Callable[[ProgressUpdate], None]) -> None:
+        """Register a progress callback for a specific run."""
+        self._progress_observers[run_id] = cb
+
+    def report_progress(self, run_id: UUID, command_name: str, message: str) -> None:
+        """Called by command tool wrappers to report execution progress."""
+        cb = self._progress_observers.get(run_id)
+        if cb:
+            cb(ProgressUpdate(run_id=run_id, command_name=command_name, message=message))
+
+    def inject(self, run_id: UUID, message: str) -> None:
+        """Inject a message into a specific running loop (between tool calls)."""
+        queue = self._injection_queues.get(run_id)
+        if queue is None:
+            dev_raise(f"AgenticLoopSupervisor.inject: unknown run_id {run_id}")
+            return
+        queue.put_nowait(message)
+
+    def drain_injections(self, run_id: UUID) -> list[str]:
+        """Drain all pending injected messages for a run. Called at each iteration boundary."""
+        queue = self._injection_queues.get(run_id)
+        if queue is None:
+            return []
         messages: list[str] = []
-        while not self._injection_queue.empty():
+        while not queue.empty():
             try:
-                messages.append(self._injection_queue.get_nowait())
+                messages.append(queue.get_nowait())
             except asyncio.QueueEmpty:
                 break
         return messages
@@ -211,7 +244,7 @@ class _Deps:
 # ── Agent ─────────────────────────────────────────────────────────────────────
 
 _agent: Agent[_Deps, str] = Agent(
-    _MODEL,
+    model=agent_defaults.MODEL_NAME,
     deps_type=_Deps,
     output_type=str,
     instructions=(
@@ -221,6 +254,8 @@ _agent: Agent[_Deps, str] = Agent(
         "Call the 'respond' tool to give intermediate feedback, ask follow-up questions, or confirm actions. "
         "Call command tools to perform actions. You may call multiple commands if the input requires it. "
         "Return an empty string as your final output if you have already responded via the 'respond' tool."
+        "Only return results you are confident about."
+        "Your are only allowed to output valid JSON tool calls. Whenever you want to present a final answer use one of the final_result tools available to you, never answer with plain text."
     ),
 )
 
@@ -314,7 +349,7 @@ def _instantiate_parameters(cmd: Command, raw: dict[str, Any]) -> dict[str, obje
         try:
             result[param_name] = param_type(str(raw_value))
         except Exception as e:
-            logger.warning(f"Failed to instantiate {param_type.__name__} for '{param_name}': {e}")
+            dev_raise(f"Failed to instantiate {param_type.__name__} for '{param_name}'", e)
             result[param_name] = None
     return result
 
@@ -323,6 +358,7 @@ def _build_command_toolset(
     commands: list[Command],
     context: CommandsContext,
     supervisor: AgenticLoopSupervisor,
+    run_id: UUID,
 ) -> FunctionToolset[_Deps]:
     """Build a FunctionToolset with one tool per command. Rebuilt per run — ephemeral."""
     toolset: FunctionToolset[_Deps] = FunctionToolset()
@@ -338,7 +374,7 @@ def _build_command_toolset(
 
                 parameters = _instantiate_parameters(bound_cmd, kwargs)
                 logger.debug(f"AgenticLoop calling command {bound_cmd.name!r} with params={parameters}")
-                supervisor.report_progress(ProgressUpdate(command_name=bound_cmd.name, message="started"))
+                supervisor.report_progress(run_id, bound_cmd.name, "started")
                 try:
                     result = await bound_cmd(parameters)
                     # Command runners may produce output in four ways (see Command.run / commands_context.run_command):
@@ -358,11 +394,11 @@ def _build_command_toolset(
                         for r in result:
                             if r is not None:
                                 await ctx.deps.context.respond(r)
-                    supervisor.report_progress(ProgressUpdate(command_name=bound_cmd.name, message="done"))
+                    supervisor.report_progress(run_id, bound_cmd.name, "done")
                     return f"command '{bound_cmd.name}' completed"
                 except Exception as e:
-                    supervisor.report_progress(ProgressUpdate(command_name=bound_cmd.name, message=f"failed: {e}"))
-                    logger.error(f"AgenticLoop command {bound_cmd.name!r} failed: {e}")
+                    supervisor.report_progress(run_id, bound_cmd.name, f"failed: {e}")
+                    dev_raise(f"AgenticLoop command {bound_cmd.name!r} failed", e)
                     return f"command '{bound_cmd.name}' failed: {e}"
 
             _tool_fn.__name__ = bound_cmd.name
@@ -382,13 +418,13 @@ def _build_command_toolset(
 # ── Agentic runner ────────────────────────────────────────────────────────────
 
 
-def _fold_injections(supervisor: AgenticLoopSupervisor, node: Any) -> None:
-    """Drain pending injected messages and append them as UserPromptParts to node.request.parts.
+def _fold_injections(supervisor: AgenticLoopSupervisor, run_id: UUID, node: Any) -> None:
+    """Drain pending injected messages for run_id and append them as UserPromptParts to node.request.parts.
 
     node must be a ModelRequestNode — its .request.parts list is mutated in place.
     No-op if the injection queue is empty.
     """
-    injected = supervisor.drain_injections()
+    injected = supervisor.drain_injections(run_id)
     if not injected:
         return
     combined = "\n".join(injected)
@@ -400,6 +436,7 @@ async def _run_agentic_loop(
     string: str,
     context: CommandsContext,
     supervisor: AgenticLoopSupervisor,
+    run_id: UUID,
     all_layers: list[CommandsContextLayer],
     recognized_entities: list[RecognizedEntity],
     message_history: list[ModelMessage],
@@ -447,9 +484,11 @@ async def _run_agentic_loop(
         recognized_entities=recognized_entities,
     )
 
-    command_toolset = _build_command_toolset(all_commands, context, supervisor)
+    command_toolset = _build_command_toolset(all_commands, context, supervisor, run_id)
 
     current_history = list(message_history)
+
+    logger.debug(f"AgenticLoop preflight: string={string!r}")
 
     async with _agent.iter(
         string,
@@ -464,7 +503,7 @@ async def _run_agentic_loop(
                 # Injection point 1: before the LLM call.
                 # Append any pending messages directly to this node's request parts.
                 # The model will see them alongside whatever context is already in the request.
-                _fold_injections(supervisor, node)
+                _fold_injections(supervisor, run_id, node)
 
                 # Acquire the LLM lock only for the duration of the model call.
                 # Released before tool execution so command runners are never blocked.
@@ -481,7 +520,7 @@ async def _run_agentic_loop(
                 # here merges injected messages with tool results in a single ModelRequest —
                 # the LLM sees both together with no history gaps and no restart.
                 if Agent.is_model_request_node(node):
-                    _fold_injections(supervisor, node)
+                    _fold_injections(supervisor, run_id, node)
 
             else:
                 # UserPromptNode or any future node type — just advance.
@@ -530,12 +569,16 @@ class AgenticLoopProcessor(CommandsContextProcessor):
         _entities = recognized_entities
         _history = list(self._message_history)
 
+        run_id = self._supervisor.register_run()
+
         async def _runner() -> None:
             try:
-                updated = await _run_agentic_loop(_string, _context, _supervisor, _layers, _entities, _history)
+                updated = await _run_agentic_loop(_string, _context, _supervisor, run_id, _layers, _entities, _history)
                 self._message_history = updated
             except Exception as e:
-                logger.error(f"AgenticLoop runner failed: {e}")
+                dev_raise(e)
+            finally:
+                self._supervisor.unregister_run(run_id)
 
         transient = Command("__agentic_loop__", Pattern("**"), _runner)
         result = SearchResult(
