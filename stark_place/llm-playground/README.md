@@ -75,3 +75,47 @@ The chain splits into three natural sections; order within each section is your 
 ```
 
 Pipeline invariants every processor must respect: `CORNERSTONES.md`.
+
+---
+
+## Tests
+
+```sh
+# Unit tests only (no model required)
+poetry run pytest tests/ -m "not benchmark"
+
+# Benchmarks only (Ollama must be running with the right models)
+poetry run pytest tests/ -m benchmark
+
+# Everything
+poetry run pytest tests/
+```
+
+### Intermediate Results
+
+#### Embeddings
+
+Even a small embeddings model performs good in finding the closest command name to the request. However, embeddings are unable to neither parse parameters, nor perform NER. Trigger words often match sloser to the parameter type then the parameter. For example, in "play bohemian rapsody song" words "play" and "song" match closer to "Song" class then "bohemian rapsody". Embeddings-powered intent suggestions might work, but NER is defenitely will stay in drafts.
+
+#### LLM
+
+with `openai:qwen3-14b` all current tests are passed except these:
+
+```sh
+FAILED tests/test_one_step_search_parsing_processor_llm.py::test_multi_command_both_returned - AssertionError: assert 'lamp_brightness' in {'lamp_on'}
+FAILED tests/test_one_step_search_parsing_processor_llm.py::test_song_and_artist_parsed - AssertionError: assert None is not None
+FAILED tests/test_two_step_search_parsing_processor_llm.py::test_song_and_artist_parsed - AssertionError: assert None is not None
+```
+
+It takes from 30s to 1m per call on macbook air m2 16GB.
+
+Smaller models tend to fail structured output and tool calls, smaller - worse. Interestingly, 0.6b somehow performs better then 1.4b and 4b in structuring output.
+
+Results might differ for each run, smaller models are more random.
+
+Next: 
+- search other instruct and code tuned models
+- optimise processors with structured llm output for smaller models
+- alternative impl: minimize prompt complexity and overhead by ditching function call and schemas in favor of prompt with examples
+- refactor prompts
+- create a better benchmark with bigger dataset

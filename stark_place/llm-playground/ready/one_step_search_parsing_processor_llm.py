@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import inspect
 import logging
-import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
@@ -37,14 +36,15 @@ from stark.core.commands_manager import SearchResult
 from stark.core.parsing import MatchResult
 from stark.general.json_encoder import CommandInfo, TypeInfo
 
+from ready import agent_defaults
+
+from .dev_raise import dev_raise
+
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
 
 
 logger = logging.getLogger(__name__)
-
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1")
-os.environ.setdefault("OLLAMA_API_KEY", "1234")
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
@@ -74,17 +74,25 @@ class _ParsedCommand(BaseModel):
 type _ParsedCommands = list[_ParsedCommand]
 
 _agent: Agent[_Deps, _ParsedCommands] = Agent(
-    "llama-3.2-3b-instruct:q4_k_m",
+    model=agent_defaults.MODEL_NAME,
     deps_type=_Deps,
     output_type=_ParsedCommands,
     instructions=(
         "You are the core processor of a natural language voice assistant. "
         "Given the user's input, identify which command(s) match and extract all their typed parameters in one shot. "
-        "Use the whole sentence as context the way a human would — natural speech often omits repeated information "
-        "(e.g. a device named earlier in the sentence applies to a later command too). "
-        "Matched substrings must not overlap across commands. "
+        "Use the whole sentence as context like a human — natural speech often omits repeated information "
+        "(e.g., a device or room named earlier in the sentence applies to a later command too). "
+        "Substrings of different matches must not overlap. "
         "Parameter values must be clean and code-friendly — extract the semantic entity, not the raw phrase. "
-        "Only return matches you are confident about."
+        "Each match substring must be an uninterrupted substring of the original input. "
+        "Only return matches you are confident about. "
+        "You MUST never output plain text, explanations, or comments. ONLY output valid JSON tool calls. "
+        "If you cannot confidently fill the JSON, respond with a final_result tool call with an empty JSON object. "
+        "Whenever presenting a final answer, use one of the final_result tools available. "
+        "Never include any text or Markdown fencing before or after. "
+        "Always respond with a valid JSON object with exactly the fields provided by the schema. "
+        "The JSON schema for output is known and must be strictly followed: any deviation or extra text is invalid."
+        "Do not hallucinate. Do not make up any tools or commands."
     ),
 )
 
@@ -147,7 +155,7 @@ def _instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) 
         try:
             result[param_name] = param_type(parsed_by_name[param_name])
         except Exception as e:
-            logger.warning(f"Failed to instantiate {param_type.__name__} for param '{param_name}': {e}")
+            dev_raise(f"Failed to instantiate {param_type.__name__} for param '{param_name}'", e)
             result[param_name] = None
     return result
 
@@ -223,13 +231,15 @@ class OneStepLLMProcessor(CommandsContextProcessor):
         command_infos = [CommandInfo.from_command(cmd) for cmd in commands]
         type_infos = _collect_type_infos(commands)
 
+        logger.debug(f"LLM OneStep: string={string!r}")
+
         try:
             response = await _agent.run(
                 string,
                 deps=_Deps(command_infos=command_infos, type_infos=type_infos, recognized_entities=recognized_entities),
             )
         except Exception as e:
-            logger.warning(f"OneShot LLM failed: {e}")
+            dev_raise(e)
             return []
 
         results: list[SearchResult] = []
@@ -237,10 +247,10 @@ class OneStepLLMProcessor(CommandsContextProcessor):
         for parsed in response.output:
             cmd = cmd_by_name.get(parsed.command_name)
             if cmd is None:
-                logger.warning(f"LLM returned unknown command: {parsed.command_name!r}")
+                dev_raise(f"LLM returned unknown command: {parsed.command_name!r}")
                 continue
             if parsed.substring not in string:
-                logger.warning(f"LLM returned substring not in input: {parsed.substring!r}")
+                dev_raise(f"LLM returned substring not in input: {parsed.substring!r}")
                 continue
 
             parameters = _instantiate_parameters(cmd, parsed.parameters)

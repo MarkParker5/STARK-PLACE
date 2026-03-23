@@ -1,10 +1,12 @@
-'''
+"""
 Embeddings-powered search among existing commands (no parameter parsing)
 Note: returns whole input string as match substring — no span localization.
 See draft/DESIGN.md for the required core changes.
 See ready solutions for alternatives.
-'''
+"""
+
 from __future__ import annotations
+
 import logging
 import os
 from collections import OrderedDict
@@ -14,11 +16,12 @@ import numpy as np
 from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
-
 from stark.core.commands_context_processor import CommandsContextLayer, CommandsContextProcessor, RecognizedEntity
 from stark.core.commands_manager import SearchResult
 from stark.core.parsing import MatchResult
 from stark.general.json_encoder import CommandInfo
+
+from .dev_raise import dev_raise
 
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
@@ -27,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 _embedder = Embedder(
     OpenAIEmbeddingModel(
-        'nomic-embed-text',
+        "nomic-embed-text",
         provider=OpenAIProvider(
-            base_url=os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:8080/v1'),
-            api_key=os.environ.get('OLLAMA_API_KEY', '1234'),
+            base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1"),
+            api_key=os.environ.get("OLLAMA_API_KEY", "1234"),
         ),
     )
 )
@@ -68,7 +71,6 @@ def _cache_put(key: tuple[str, ...], embeddings: np.ndarray) -> None:
 
 
 class EmbeddingCommandSearchProcessor(CommandsContextProcessor):
-
     # CommandsContextProcessor Implementation
 
     @override
@@ -99,7 +101,7 @@ class EmbeddingCommandSearchProcessor(CommandsContextProcessor):
                 cached = np.array((await _embedder.embed_documents(command_texts)).embeddings)
                 _cache_put(cache_key, cached)
         except Exception as e:
-            logger.warning(f"Embedding request failed: {e}")
+            dev_raise(e)
             return []
 
         # cosine similarity: (n_commands,)
@@ -109,15 +111,20 @@ class EmbeddingCommandSearchProcessor(CommandsContextProcessor):
         for cmd, sim in zip(commands, sims):
             if sim < _SIMILARITY_THRESHOLD:
                 continue
-            results.append((float(sim), SearchResult(
-                cmd,
-                MatchResult(
-                    string,
-                    start := 0,
-                    start + len(string),
-                    {},
-                ),
-            )))
+            results.append(
+                (
+                    float(sim),
+                    SearchResult(
+                        cmd,
+                        MatchResult(
+                            string,
+                            start := 0,
+                            start + len(string),
+                            {},
+                        ),
+                    ),
+                )
+            )
 
         results.sort(key=lambda x: x[0], reverse=True)
         return [sr for _, sr in results]

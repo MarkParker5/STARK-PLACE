@@ -25,7 +25,6 @@ Note on opaque APIs: some APIs hide intermediate steps and only surface the fina
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, override
 
@@ -37,14 +36,15 @@ from stark.core.commands_manager import SearchResult
 from stark.core.parsing import MatchResult
 from stark.core.patterns import Pattern
 
+from ready import agent_defaults
+
+from .dev_raise import dev_raise
+
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
 
 
 logger = logging.getLogger(__name__)
-
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1")
-os.environ.setdefault("OLLAMA_API_KEY", "1234")
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
@@ -64,9 +64,9 @@ class _AgentDecision(BaseModel):
 
 
 _agent: Agent[_Deps, _AgentDecision] = Agent(
-    "llama-3.2-3b-instruct:q4_k_m",
+    model=agent_defaults.MODEL_NAME,
     deps_type=_Deps,
-    output_type=_AgentDecision,
+    output_type=agent_defaults.output_type(_AgentDecision),
 )
 
 
@@ -80,6 +80,8 @@ async def _inject_mode_instructions(ctx) -> str:
             "If the task requires tool calls, multi-step reasoning, or extended work — set response_type to 'background' and leave response null. "
             "If the input is outside your scope entirely — set response_type to 'none' and leave response null. "
             "Always fill in reasoning (short, for logging) and confidence (0.0–1.0)."
+            "Only return results you are confident about."
+            "Your are only allowed to output valid JSON tool calls. Whenever you want to present a final answer use one of the final_result tools available to you, never answer with plain text."
         )
     else:  # full
         return (
@@ -87,6 +89,8 @@ async def _inject_mode_instructions(ctx) -> str:
             "Handle the user's request fully. Produce the best response you can. "
             "Set response_type to 'immediate' and fill in response with your answer. "
             "Always fill in reasoning (short, for logging) and confidence (0.0–1.0)."
+            "Only return results you are confident about."
+            "Your are only allowed to output valid JSON tool calls. Whenever you want to present a final answer use one of the final_result tools available to you, never answer with plain text."
         )
 
 
@@ -113,13 +117,14 @@ class FallbackAgentProcessor(CommandsContextProcessor):
         context_layer: CommandsContextLayer,
         recognized_entities: list[RecognizedEntity],
     ) -> list[SearchResult]:
+        logger.debug(f"AgentFallback preflight: string={string!r}")
         try:
             result = await _agent.run(
                 string,
                 deps=_Deps(recognized_entities=recognized_entities, mode="preflight"),
             )
         except Exception as e:
-            logger.warning(f"AgentFallback preflight failed: {e}")
+            dev_raise(e)
             return []
 
         decision = result.output
@@ -155,7 +160,7 @@ class FallbackAgentProcessor(CommandsContextProcessor):
                         response_text = full_result.output.response or ""
                         logger.debug(f"AgentFallback full: confidence={full_result.output.confidence:.2f} reasoning={full_result.output.reasoning!r}")
                     except Exception as e:
-                        logger.error(f"AgentFallback full call failed: {e}")
+                        dev_raise(e)
                         raise
                     return Response(text=response_text, voice=response_text)
 

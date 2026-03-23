@@ -1,23 +1,23 @@
-'''
+"""
 Experimental.
 Embeddings-powered NER markup — finds substrings in input corresponding to registered Object types. Uses sliding window to find substrings which might affect performance, but it should be compensated by the speed of generating embeddings relative to LLM output.
 The use of STARK's built-in options for NER, or any other NER-first ML model is preferred.
-'''
+"""
+
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING, override
 
 import numpy as np
-from pydantic_ai import Embedder
-from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
-from pydantic_ai.providers.openai import OpenAIProvider
-
 from stark.core.commands_context_processor import CommandsContextProcessor, RecognizedEntity
 from stark.core.commands_manager import SearchResult
 from stark.core.parsing import ObjectType
 from stark.general.json_encoder import TypeInfo
+
+from ready import agent_defaults
+
+from .dev_raise import dev_raise
 
 if TYPE_CHECKING:
     from stark.core.commands_context import CommandsContext
@@ -25,18 +25,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1")
-os.environ.setdefault("OLLAMA_API_KEY", "1234")
-
-_embedder = Embedder(
-    OpenAIEmbeddingModel(
-        "nomic-embed-text",
-        provider=OpenAIProvider(
-            base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1"),
-            api_key=os.environ.get("OLLAMA_API_KEY", "1234"),
-        ),
-    )
-)
+_embedder = agent_defaults.embedder()
 
 _SIMILARITY_THRESHOLD = 0.5
 # NER targets open-ended ** types (song names, artist names, etc.) — pattern shape doesn't help.
@@ -104,11 +93,9 @@ class EmbeddingsNERProcessor(CommandsContextProcessor):
 
         try:
             type_vecs = await self._get_type_embeddings()  # (n_types, dims)
-            candidate_vecs = np.array(
-                (await _embedder.embed_documents(candidates)).embeddings
-            )  # (n_candidates, dims)
+            candidate_vecs = np.array((await _embedder.embed_documents(candidates)).embeddings)  # (n_candidates, dims)
         except Exception as e:
-            logger.warning(f"Embeddings NER failed: {e}")
+            dev_raise(e)
             return [], 0
 
         # cosine similarity matrix: (n_candidates, n_types)
@@ -124,10 +111,7 @@ class EmbeddingsNERProcessor(CommandsContextProcessor):
             if best_sim < self._similarity_threshold:
                 continue
             best_candidate = candidates[int(best_idx)]
-            logger.debug(
-                f"Embeddings NER matched '{best_candidate}' -> {obj_type.__name__} "
-                f"(similarity={float(best_sim):.3f})"
-            )
+            logger.debug(f"Embeddings NER matched '{best_candidate}' -> {obj_type.__name__} (similarity={float(best_sim):.3f})")
             recognized_entities.append(RecognizedEntity(best_candidate, obj_type))
 
         return [], 0
@@ -139,8 +123,6 @@ class EmbeddingsNERProcessor(CommandsContextProcessor):
             return self._type_embeddings
 
         type_texts = [info.as_text() for info in self._type_infos]
-        self._type_embeddings = np.array(
-            (await _embedder.embed_documents(type_texts)).embeddings
-        )
+        self._type_embeddings = np.array((await _embedder.embed_documents(type_texts)).embeddings)
         logger.debug(f"Cached embeddings for {len(self._types)} types.")
         return self._type_embeddings

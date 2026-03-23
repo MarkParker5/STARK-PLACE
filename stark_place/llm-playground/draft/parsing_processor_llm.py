@@ -1,10 +1,10 @@
-'''
+"""
 LLM-only-powered full parameter parsing (as an evolution of LLM-powered NER) — given a pre-matched command and substring, parse and instantiate typed parameters with code-friendly values
 Note: this is a draft. Pure parse-only requires the caller to pass a pre-matched (command, substring) pair.
 That split is currently not supported by the processor pipeline — search and parsing are fused in SearchProcessor.
 See draft/DESIGN.md for the required core changes.
 See ready solutions for alternatives.
-'''
+"""
 
 from __future__ import annotations
 
@@ -15,11 +15,10 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-
 from stark.core.command import Command
-
 from stark.general.json_encoder import CommandInfo, TypeInfo
 
+from .dev_raise import dev_raise
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,9 @@ class _ParseDeps:
 
 class ParsedParameter(BaseModel):
     name: str = Field(description="Parameter name as declared in the command signature")
-    value: str = Field(description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'")
+    value: str = Field(
+        description="Extracted value as a clean, code-friendly string — not a raw NL phrase. E.g. for a song name: 'Bohemian Rhapsody', not 'play bohemian rhapsody by queen'"
+    )
 
 
 _parse_agent: Agent[_ParseDeps, list[ParsedParameter]] = Agent(
@@ -73,7 +74,7 @@ async def parse_parameters(cmd: Command, substring: str) -> dict[str, object]:
             ),
         )
     except Exception as e:
-        logger.warning(f"LLM parameter parsing failed for '{cmd.name}': {e}")
+        dev_raise(e)
         return {}
     return instantiate_parameters(cmd, response.output)
 
@@ -81,6 +82,7 @@ async def parse_parameters(cmd: Command, substring: str) -> dict[str, object]:
 def collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
     """Collect TypeInfo for all unique Object subclass parameter types across commands."""
     from stark.core.types import Object
+
     seen: set[str] = set()
     type_infos: list[TypeInfo] = []
     for cmd in commands:
@@ -112,7 +114,7 @@ def instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) -
             result[param_name] = obj
             logger.debug(f"Instantiated {param_type.__name__}({parsed_by_name[param_name]!r}) for param '{param_name}'")
         except Exception as e:
-            logger.warning(f"Failed to instantiate {param_type.__name__} for param '{param_name}': {e}")
+            dev_raise(e)
             result[param_name] = None
 
     return result
