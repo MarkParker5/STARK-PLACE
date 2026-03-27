@@ -163,3 +163,5 @@ downloads/
 site/
 build/
 test.py
+
+*.benchmark.json

@@ -26,7 +26,7 @@ MODEL_LARGE = "openai:qwen3-14b"
 # remote
 MODEL_HUGE = ""
 
-MODEL_NAME = MODEL_LARGE  # change this to MODEL_TINY, MODEL_MEDIUM, MODEL_LARGE or as needed
+MODEL_NAME = MODEL_NANO  # change this to MODEL_TINY, MODEL_MEDIUM, MODEL_LARGE or as needed
 MODEL_EMBEDDINGS = "qwen3-embedding-0.6b"  # embeddings need a separate model
 
 # ---------------------------------------------------------------------------------

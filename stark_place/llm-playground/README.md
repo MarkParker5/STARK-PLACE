@@ -99,7 +99,7 @@ Even a small embeddings model performs good in finding the closest command name 
 
 #### LLM
 
-with `openai:qwen3-14b` all current tests are passed except these:
+with `openai:qwen3-14b` all current tests are passed (usually after a retry) except these:
 
 ```sh
 FAILED tests/test_one_step_search_parsing_processor_llm.py::test_multi_command_both_returned - AssertionError: assert 'lamp_brightness' in {'lamp_on'}
