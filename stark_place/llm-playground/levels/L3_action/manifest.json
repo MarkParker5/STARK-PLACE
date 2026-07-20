@@ -1,0 +1,11 @@
+{
+  "rung": "L3",
+  "freedom": "execute one command, observe output, confirm",
+  "tested_on": "action cases",
+  "correct_mean": 0.93,
+  "finding": "Output-handling (relaying a tool result) is fine; the risk is deciding WHEN to act and prompt-injection triggering unwanted actions. Keep actions behind an injection guard + confirmation.",
+  "recommended_model": "qwen3:1.7b or >=3B",
+  "verdict": "usable with a guard",
+  "source": "benchmark/conversational/report_conv/metrics.json",
+  "date": "2026-07-20"
+}

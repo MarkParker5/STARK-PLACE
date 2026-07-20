@@ -1,0 +1,11 @@
+{
+  "rung": "L0",
+  "freedom": "none \u2014 rephrase provided context",
+  "tested_on": "transform cases",
+  "correct_mean": 0.6,
+  "finding": "Small models faithfully rephrase already-provided data. This is their safe zone; no tool decision involved.",
+  "recommended_model": "any >=1B",
+  "verdict": "reliable",
+  "source": "benchmark/conversational/report_conv/metrics.json",
+  "date": "2026-07-20"
+}

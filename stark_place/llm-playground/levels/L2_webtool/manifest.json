@@ -1,0 +1,12 @@
+{
+  "rung": "L2",
+  "freedom": "call web_search, summarize",
+  "tested_on": "webtool cases",
+  "correct_elected": 0.76,
+  "correct_forced": 0.92,
+  "finding": "Same as L1, plus stubborn parametric leakage: even with the right snippet in context, a 1.5B may override it from memory (e.g. World Cup 'France' vs retrieved 'Argentina'). Force retrieval; keep answers short/extractive.",
+  "recommended_model": "qwen3:1.7b or >=3B",
+  "verdict": "trusted only under forced retrieval",
+  "source": "benchmark/conversational/report_conv/metrics.json",
+  "date": "2026-07-20"
+}

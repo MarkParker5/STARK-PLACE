@@ -1,0 +1,12 @@
+{
+  "rung": "L1",
+  "freedom": "read local state (home_state), answer from it",
+  "tested_on": "rag cases",
+  "correct_elected": 0.6,
+  "correct_forced": 0.83,
+  "finding": "Elected: small models often skip the tool and guess. Forced (pipeline retrieves, model rephrases): faithful. Use forced retrieval.",
+  "recommended_model": "qwen3:1.7b elected, or any >=1B forced",
+  "verdict": "trusted only under forced retrieval",
+  "source": "benchmark/conversational/report_conv/metrics.json",
+  "date": "2026-07-20"
+}
