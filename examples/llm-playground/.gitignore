@@ -1,0 +1,4 @@
+# Internal edge-LLM research — kept privately on disk, never committed.
+# (Reports, benchmark data, harnesses and report builders.)
+# Purged from git history 2026-08-11.
+benchmark/
