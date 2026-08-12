@@ -3,7 +3,7 @@
 
 The registry is the intersection of:
   1. packages/*/pyproject.toml  -> canonical package list (name, description,
-     requires-python, stark-place-core compat). Examples/WIP have no pyproject,
+     requires-python, stark-engine compat). Examples/WIP have no pyproject,
      so they never appear. This is the display-control lever.
   2. wheels                      -> version history, from either a local --dist
      dir (for testing) or a --assets JSON of GitHub release assets (in CI).
@@ -71,11 +71,11 @@ class Wheel:
 
 @dataclass
 class Package:
-    dist: str                      # normalized distribution name, e.g. stark-place-core
+    dist: str                      # normalized distribution name, e.g. stark-ai
     display_name: str              # as declared in pyproject
     description: str
     requires_python: str
-    core_compat: str               # declared stark-place-core spec, or ""
+    stark_dep: str                 # declared stark-* dependency (e.g. stark-engine spec), or ""
     wheels: list[Wheel] = field(default_factory=list)
 
 
@@ -88,17 +88,17 @@ def scan_packages(packages_dir: Path) -> dict[str, Package]:
         if not proj or "name" not in proj:
             continue  # not a PEP 621 distribution — skip
         name = proj["name"]
-        core_compat = ""
+        stark_dep = ""
         for dep in proj.get("dependencies", []):
-            if _norm(dep).startswith("stark-place-core"):
-                core_compat = dep.strip()
+            if _norm(dep).startswith("stark-"):
+                stark_dep = dep.strip()
                 break
         packages[_norm(name)] = Package(
             dist=_norm(name),
             display_name=name,
             description=proj.get("description", ""),
             requires_python=proj.get("requires-python", ""),
-            core_compat=core_compat,
+            stark_dep=stark_dep,
         )
     return packages
 
@@ -196,8 +196,8 @@ def render(packages: list[Package], find_links_url: str, site_title: str) -> str
         meta = []
         if pkg.requires_python:
             meta.append(f'<span>Python <code>{html.escape(pkg.requires_python)}</code></span>')
-        if pkg.core_compat:
-            meta.append(f'<span>needs <code>{html.escape(pkg.core_compat)}</code></span>')
+        if pkg.stark_dep:
+            meta.append(f'<span>needs <code>{html.escape(pkg.stark_dep)}</code></span>')
         meta_html = f'<div class="meta">{"".join(meta)}</div>' if meta else ""
 
         latest_html = '<div class="latest">' + "".join(_wheel_row(w) for w in latest) + "</div>"

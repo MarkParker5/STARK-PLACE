@@ -30,9 +30,9 @@ import tomllib
 from pathlib import Path
 
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"  # git's empty tree
-# What counts as "src" for auto-trigger — tune here. Import code + build config;
-# docs/tests/changelog edits do NOT auto-trigger a release on their own.
-SRC_INCLUDE = ("stark_place/",)
+# What counts as "src" for auto-trigger: any changed file under the package dir
+# EXCEPT these — docs/tests/changelog edits don't auto-trigger a release on their
+# own (a pyproject change does: it means a version/dep change worth shipping).
 SRC_EXCLUDE = ("tests/", "README", "CHANGELOG", "docs/")
 
 
@@ -67,11 +67,12 @@ def _ver_key(v: str) -> tuple:
 def src_changed(pkg_dir: Path, base: str) -> bool:
     diff = sh("git", "diff", "--name-only", f"{base}..HEAD", "--", str(pkg_dir))
     for line in diff.splitlines():
+        if not line:
+            continue
         rel = line[len(str(pkg_dir)) + 1:]
         if any(x in rel for x in SRC_EXCLUDE):
             continue
-        if any(rel.startswith(x) for x in SRC_INCLUDE):
-            return True
+        return True  # a non-excluded file under the package changed → src change
     return False
 
 

@@ -7,7 +7,7 @@ description: Test and build a single STARK-PLACE distribution from its directory
 
 inputs:
   package:
-    description: Distribution name (for `uv --package`), e.g. stark-place-core.
+    description: Distribution name (for `uv --package`), e.g. stark-ai.
     required: true
   dir:
     description: Path to the package (contains pyproject.toml). Default repo root.
@@ -33,7 +33,7 @@ runs:
       shell: bash
       run: |
         set -e
-        # Sync the workspace so cross-deps (e.g. stark-place-core) resolve locally.
+        # Sync the workspace so deps (e.g. stark-engine) resolve.
         uv sync --package "${{ inputs.package }}"
         # Run only this package's tests; "no tests collected" (pytest exit 5) = pass.
         set +e
