@@ -134,7 +134,7 @@ jobs:
           python3 tools/registry_gen.py \
             --assets assets.json \
             --out site/index.html \
-            --find-links-url "https://place.markparker.me/"
+            --find-links-url "https://markparker5.github.io/STARK-PLACE/"
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -261,7 +261,7 @@ def main() -> None:
     ap.add_argument("--dist", type=Path, help="local dir of .whl files (testing)")
     ap.add_argument("--assets", type=Path, help="JSON of release assets (CI)")
     ap.add_argument("--out", type=Path, default=Path("find-links/index.html"))
-    ap.add_argument("--find-links-url", default="https://place.markparker.me/")
+    ap.add_argument("--find-links-url", default="https://markparker5.github.io/STARK-PLACE/")
     ap.add_argument("--title", default="STARK-PLACE registry")
     args = ap.parse_args()
 
