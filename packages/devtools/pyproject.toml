@@ -1,0 +1,35 @@
+# Distribution: stark-place-devtools  →  import: stark_place.devtools
+# Dev tooling migrated from the STARK repo: the sys.monitoring profiler and the
+# web visualizer. Depends on the STARK ENGINE (it profiles/demoes stark.core.*).
+# Run: python -m stark_place.devtools.profiler   (serves the built visualizer)
+
+[project]
+name = "stark-place-devtools"
+version = "0.1.0"
+description = "Dev tools for S.T.A.R.K. — sys.monitoring profiler + web visualizer (replay, dashboard, wiring, brain)."
+requires-python = ">=3.12"        # profiler uses sys.monitoring (PEP 669, 3.12+)
+license = { text = "CC-BY-NC-SA-4.0" }
+authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
+keywords = ["stark", "stark-place", "profiler", "visualizer", "devtools"]
+dependencies = [
+    "stark-engine>=4.5,<5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Ship the profiler package + the BUILT visualizer (dist/), but not the JS source
+# tree or node_modules. `artifacts` force-includes dist even though it's gitignored.
+[tool.hatch.build.targets.wheel]
+packages = ["stark_place"]
+artifacts = ["stark_place/devtools/visualizer/dist/**"]
+exclude = [
+    "stark_place/devtools/visualizer/src/**",
+    "stark_place/devtools/visualizer/public/**",
+    "stark_place/devtools/visualizer/node_modules/**",
+    "stark_place/devtools/visualizer/*.json",
+    "stark_place/devtools/visualizer/*.ts",
+    "stark_place/devtools/visualizer/index.html",
+    "**/*.tsbuildinfo",
+]
