@@ -2275,16 +2275,16 @@ requires-dist = [{ name = "stark-engine", specifier = ">=4.5,<5" }]
 
 [[package]]
 name = "stark-engine"
-version = "4.5.4"
+version = "4.5.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "asyncer" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/92/48a3d934b51f406658039403b7310fa93fdb450c3b3e9df2b87e30627833/stark_engine-4.5.4.tar.gz", hash = "sha256:0fa16848cd1490a18512145627e1b1c5f2521b4028ac96a23c40570bac5349d1", size = 70911, upload-time = "2026-07-05T18:03:52.758Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/f4/659f2f823e1d195ac98f1fff90b9a612db5dc0895f5288fe18cad592e74f/stark_engine-4.5.5.tar.gz", hash = "sha256:0f7d9a260d8ad3d16934d8ed6206b80d3dcf8c944c6b607bb54c95208f9bdc53", size = 71931, upload-time = "2026-08-12T21:35:00.437Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/f9/0c832bd9fef6e14576d612b990810b42651d662cd89614436a171cd3b40a/stark_engine-4.5.4-py3-none-any.whl", hash = "sha256:124b641563ffce011957ed032dbd17700cdaca12f7886300c6ad8cd34dd35af9", size = 93103, upload-time = "2026-07-05T18:03:51.612Z" },
+    { url = "https://files.pythonhosted.org/packages/37/fd/317094bcb8babf01057497a6b305914ffba2d1aa780ce64c4c7d7709db30/stark_engine-4.5.5-py3-none-any.whl", hash = "sha256:116623c084446229ffda898018dec88794e148513df1ceb2a59cbe172918778e", size = 93790, upload-time = "2026-08-12T21:34:59.293Z" },
 ]
 
 [[package]]
