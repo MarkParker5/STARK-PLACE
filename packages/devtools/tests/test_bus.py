@@ -1,8 +1,8 @@
 import os
 import threading
 
-from stark_place.devtools.profiler import JSONLSink, MemorySink, ProfileEvent, ProfilerBus
-from stark_place.devtools.profiler.schema import CALL
+from stark_devtools.profiler import JSONLSink, MemorySink, ProfileEvent, ProfilerBus
+from stark_devtools.profiler.schema import CALL
 
 
 def _event(seq: int, thread: int) -> ProfileEvent:

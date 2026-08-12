@@ -36,7 +36,7 @@ from stark.core.commands_manager import SearchResult
 from stark.core.parsing import MatchResult
 from stark.general.json_encoder import CommandInfo, TypeInfo
 
-from stark_place.ai import agent_defaults
+from stark_ai import agent_defaults
 
 from .dev_raise import dev_raise
 

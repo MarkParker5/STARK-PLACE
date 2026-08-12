@@ -1,8 +1,8 @@
 import asyncer
 import pytest
 
-from stark_place.devtools.profiler import profile
-from stark_place.devtools.profiler.capture import STARK_DIR
+from stark_devtools.profiler import profile
+from stark_devtools.profiler.capture import STARK_DIR
 from stark.core import CommandsContext, CommandsManager, Response
 
 

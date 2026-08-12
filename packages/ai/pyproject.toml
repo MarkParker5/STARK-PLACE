@@ -1,10 +1,9 @@
-# Distribution: stark-place-ai  →  import: stark_place.ai
+# Distribution: stark-ai  →  import: stark_ai
 # LLM-powered processors for the STARK engine (moved from llm-playground/ready).
-# Depends on the STARK ENGINE (stark-engine), not on stark-place-core — these
-# extend stark.core.* directly.
+# Depends on the STARK ENGINE (stark-engine) directly — extends stark.core.*.
 
 [project]
-name = "stark-place-ai"
+name = "stark-ai"
 version = "0.1.0"
 description = "LLM processors for S.T.A.R.K. — agentic loop, structured & search-parsing, LLM/embedding NER, fallback agent."
 requires-python = ">=3.10"
@@ -24,4 +23,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["stark_place"]
+packages = ["stark_ai"]

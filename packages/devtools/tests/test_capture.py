@@ -1,9 +1,9 @@
 import sys
 import threading
 
-from stark_place.devtools.profiler import MemorySink, ProfilerBus
-from stark_place.devtools.profiler.capture import STARK_DIR, Capture
-from stark_place.devtools.profiler.schema import CALL, RETURN
+from stark_devtools.profiler import MemorySink, ProfilerBus
+from stark_devtools.profiler.capture import STARK_DIR, Capture
+from stark_devtools.profiler.schema import CALL, RETURN
 
 _TOOL = sys.monitoring.PROFILER_ID
 

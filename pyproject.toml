@@ -8,9 +8,9 @@ members = ["packages/*"]
 # Tell uv to resolve these names from the workspace (local source) instead of
 # an index during development. Add one line per new module.
 [tool.uv.sources]
-stark-place-ai = { workspace = true }
-stark-place-triggers = { workspace = true }
-stark-place-devtools = { workspace = true }
+stark-ai = { workspace = true }
+stark-triggers = { workspace = true }
+stark-devtools = { workspace = true }
 
 # Dev-only tooling shared across the workspace (not shipped in any wheel).
 [dependency-groups]

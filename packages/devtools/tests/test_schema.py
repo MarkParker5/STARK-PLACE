@@ -1,7 +1,7 @@
 import json
 
-from stark_place.devtools.profiler import ProfileEvent, SCHEMA_VERSION
-from stark_place.devtools.profiler.schema import CALL
+from stark_devtools.profiler import ProfileEvent, SCHEMA_VERSION
+from stark_devtools.profiler.schema import CALL
 
 
 def test_schema_version():

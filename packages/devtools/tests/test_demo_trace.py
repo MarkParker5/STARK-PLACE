@@ -1,6 +1,6 @@
 """Golden end-to-end trace: the real engine, profiled, asserted at the semantic level."""
 
-from stark_place.devtools.profiler.schema import CALL, RETURN
+from stark_devtools.profiler.schema import CALL, RETURN
 
 
 def _find(events, symbol, phase):

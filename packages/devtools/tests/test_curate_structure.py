@@ -1,5 +1,5 @@
-from stark_place.devtools.profiler.curate import curate
-from stark_place.devtools.profiler.structure import build_graph, extract_classes
+from stark_devtools.profiler.curate import curate
+from stark_devtools.profiler.structure import build_graph, extract_classes
 
 
 async def test_curate_produces_ordered_steps(run_utterance):
