@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "stark-place"
+version = "1.1.0"
+description = "S.T.A.R.K. Platform Library And Community Extensions"
+authors = ["Mark Parker <mark@parker-programs.com>"]
+license = "CC BY-NC-SA 4.0"
+readme = "README.md"
+packages = [{include = "stark_place"}]
+homepage = "https://pypi.org/project/stark-place/"
+repository = "https://github.com/MarkParker5/STARK-PLACE"
+documentation = "https://stark.markparker.me"
+keywords = ["python", "open-source", "natural-language-processing", "framework", "cross-platform", "natural-language", "voice", "voice-commands", "python3", "voice-recognition", "speech-recognition", "speech-to-text", "community-project", "voice-assistant", "voice-interface", "NLP", "machine-learning", "AI", "text-analysis", "stark", "stark-place", "stark-engine", "mark parker"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.2"
+mypy = "^1.5.1"
+pytest-asyncio = "^0.21.1"
+pytest-trio = "^0.8.0"
+pytest-repeat = "^0.9.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,23 @@
+# Distribution: stark-place-core  →  import: stark_place.core
+# The Foundation: parsing types + base harness. Depends on NOTHING internal.
+# Clone this file per module: rename, bump the import path, add real deps.
+
+[project]
+name = "stark-place-core"
+version = "0.1.0"
+description = "S.T.A.R.K. Platform core — parsing types and base harness, imported everywhere."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "CC-BY-NC-SA-4.0" }
+authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
+keywords = ["stark", "stark-place", "nlp", "voice-assistant"]
+dependencies = []  # core stays dependency-light on purpose
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# PEP 420 namespace: ship the stark_place/ tree WITHOUT a stark_place/__init__.py.
+# Each distribution contributes only its stark_place/<name>/ subtree.
+[tool.hatch.build.targets.wheel]
+packages = ["stark_place"]

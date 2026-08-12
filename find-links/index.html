@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!--
+  Flat find-links page for STARK-PLACE wheels.
+  Serve via GitHub Pages, then install with:
+    pip install stark-place-<name> --find-links https://markparker5.github.io/STARK-PLACE/find-links/
+  Rules:
+    - Append one <a> per built wheel (each hrefs a GitHub Release asset).
+    - List EVERY module incl. core so cross-deps (stark-place-ai -> stark-place-core) resolve here.
+    - APPEND-ONLY: never delete old entries; pip needs all versions for constraints.
+-->
+<html>
+  <head><title>STARK-PLACE find-links</title></head>
+  <body>
+    <h1>STARK-PLACE wheels</h1>
+    <!-- Example (uncomment + fix tag/filename after the first `uv build` + release upload):
+    <a href="https://github.com/MarkParker5/STARK-PLACE/releases/download/core-v0.1.0/stark_place_core-0.1.0-py3-none-any.whl">stark_place_core-0.1.0-py3-none-any.whl</a>
+    -->
+  </body>
+</html>

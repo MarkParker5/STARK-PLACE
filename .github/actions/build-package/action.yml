@@ -1,0 +1,51 @@
+# Reusable build+test for ONE STARK-PLACE distribution.
+# Composite action (not a reusable workflow) on purpose: it runs as a *step*, so
+# a matrix leg can test+build+release a package inline and stay isolated from the
+# other legs (fail-fast:false). Caller must have already checked out the repo.
+name: build-package
+description: Test and build a single STARK-PLACE distribution from its directory.
+
+inputs:
+  package:
+    description: Distribution name (for `uv --package`), e.g. stark-place-core.
+    required: true
+  dir:
+    description: Path to the package (contains pyproject.toml). Default repo root.
+    default: "."
+  python-version:
+    description: Python to test/build against.
+    default: "3.11"
+
+outputs:
+  wheel:
+    description: Repo-relative path to the built wheel.
+    value: ${{ steps.build.outputs.wheel }}
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        enable-cache: true
+
+    - name: Test (isolated to this package)
+      shell: bash
+      run: |
+        set -e
+        # Sync the workspace so cross-deps (e.g. stark-place-core) resolve locally.
+        uv sync --package "${{ inputs.package }}"
+        # Run only this package's tests; "no tests collected" (pytest exit 5) = pass.
+        set +e
+        uv run --package "${{ inputs.package }}" pytest "${{ inputs.dir }}" -q
+        code=$?
+        set -e
+        if [ "$code" -ne 0 ] && [ "$code" -ne 5 ]; then exit "$code"; fi
+
+    - name: Build wheel + sdist
+      id: build
+      shell: bash
+      run: |
+        set -e
+        uv build --package "${{ inputs.package }}" -o dist
+        echo "wheel=$(ls dist/*.whl | head -1)" >> "$GITHUB_OUTPUT"

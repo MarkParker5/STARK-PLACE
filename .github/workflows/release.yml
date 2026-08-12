@@ -1,86 +1,142 @@
-name: Publish to PyPI and Create Release
+# STARK-PLACE multi-distribution release.
+#
+# Monorepo of standalone packages (packages/*), each with its own version and its
+# own `<dist-name>-v<version>` tags. Per push we:
+#   1. prepare  — plan which packages changed, patch-bump the already-released ones,
+#                 commit all bumps in ONE commit (avoids parallel push races).
+#   2. release  — matrix over changed packages, fail-fast:false so a red test in one
+#                 package never blocks the others; each leg tests+builds+tags+releases
+#                 its own package with its own changelog.
+#   3. registry — regenerate the find-links registry from ALL release assets and
+#                 deploy it to this repo's Pages (built-in GITHUB_TOKEN; no PAT).
+#
+# The old monolithic `stark-place` build is gone — registry-only now.
+
+name: Release packages
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
+    inputs:
+      packages:
+        description: "'all', or comma-separated dist names to force-release"
+        default: "all"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # tags, releases, the bump commit
+  pages: write      # deploy registry
+  id-token: write   # Pages deployment
 
 jobs:
-  publish:
-    permissions:
-      id-token: write
-      contents: write
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # need full history + tags for diff/changelog
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Plan + apply version bumps
+        id: plan
+        run: |
+          BASE="${{ github.event.before }}"
+          # github.event.before is all-zeros on first push to a branch.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=""; fi
+          DISPATCH="${{ github.event_name == 'workflow_dispatch' && inputs.packages || '' }}"
+          python3 tools/release_plan.py --base "$BASE" --dispatch "$DISPATCH" --apply-bumps
+
+      - name: Commit bumps
+        if: steps.plan.outputs.any == 'true'
+        run: |
+          if ! git diff --quiet -- 'packages/*/pyproject.toml'; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -am "ci: version bump [skip ci]"
+            git push
+          fi
+
+  release:
+    needs: prepare
+    if: needs.prepare.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false            # one package's failure must not stop the others
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix).include }}
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: master             # includes the bump commit pushed by prepare
 
-      - uses: actions/setup-python@v2
+      - name: Build + test ${{ matrix.package }}
+        id: bt
+        uses: ./.github/actions/build-package
         with:
-          python-version: '3.10'
+          package: ${{ matrix.package }}
+          dir: ${{ matrix.dir }}
 
-      - name: Install dependencies
+      - name: Per-package changelog
+        id: log
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install
+          RANGE="${{ matrix.prev_tag }}..HEAD"
+          [ -z "${{ matrix.prev_tag }}" ] && RANGE="HEAD"
+          {
+            echo "body<<EOF"
+            echo "### ${{ matrix.package }} ${{ matrix.version }}"
+            git log --pretty=format:"- %s" "$RANGE" -- "${{ matrix.dir }}" || true
+            echo ""
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Version bump
-        id: version
-        run: |
-          if [[ "v$(poetry version --short)" == "$(git describe --tags --always --abbrev=0)" ]]; then
-            poetry version patch
-            git add pyproject.toml
-            git config --global user.email "mark@parker-programs.com"
-            git config --global user.name "MarkParker5"
-            git commit -m "Version bump v$(poetry version --short)"
-            git push
-            echo Version bumped to $(poetry version --short)
-          fi
-          echo Using version $(poetry version --short)
-          echo VERSION="v$(poetry version --short)" >> $GITHUB_OUTPUT
-
-      - name: Build distribution
-        id: build
-        run: |
-          poetry build
-          echo FILE="$(ls dist/*.whl -U | head -1)" >> $GITHUB_OUTPUT
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-      - name: Create tag
-        uses: rickstaa/action-create-tag@v1
-        with:
-          tag: ${{ steps.version.outputs.VERSION }}
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          changelog=$(git log --pretty=format:"- %s" "${{ steps.version.outputs.VERSION }}..HEAD")
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Tag + release + upload wheel
         env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-        with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          release_name: Release ${{ steps.version.outputs.VERSION }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ matrix.tag }}" \
+            --title "${{ matrix.package }} ${{ matrix.version }}" \
+            --notes "${{ steps.log.outputs.body }}" \
+            --target "$(git rev-parse HEAD)"
+          gh release upload "${{ matrix.tag }}" dist/*.whl dist/*.tar.gz --clobber
 
-      - name: Upload .whl file
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+  registry:
+    needs: release
+    if: always() && needs.prepare.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.build.outputs.FILE }}
-          asset_name: ${{ steps.build.outputs.FILE }}
-          asset_content_type: application/zip
+          python-version: "3.12"
+
+      - name: Dump all release wheels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Every wheel asset across all releases -> assets.json for the generator.
+          # --jq streams one JSON object per line; collect them into a list.
+          gh api --paginate repos/${{ github.repository }}/releases \
+            --jq '.[].assets[] | select(.name|endswith(".whl")) | {name, browser_download_url}' \
+            | python3 -c "import sys,json; json.dump([json.loads(l) for l in sys.stdin if l.strip()], open('assets.json','w'))"
+
+      - name: Generate registry
+        run: |
+          python3 tools/registry_gen.py \
+            --assets assets.json \
+            --out site/index.html \
+            --find-links-url "https://place.markparker.me/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4

@@ -1,0 +1,25 @@
+# Distribution: stark-place-triggers  →  import: stark_place.triggers
+# App-level input triggers (keyboard hotkey, Porcupine wakeword). Standalone —
+# no stark-engine import; just the trigger backends.
+
+[project]
+name = "stark-place-triggers"
+version = "0.1.0"
+description = "S.T.A.R.K. input triggers — keyboard hotkey and Porcupine wakeword."
+requires-python = ">=3.10"
+license = { text = "CC-BY-NC-SA-4.0" }
+authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
+keywords = ["stark", "stark-place", "wakeword", "porcupine", "voice-assistant"]
+dependencies = [
+    "anyio",
+    "pynput",
+    "pvporcupine",
+    "pvrecorder",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["stark_place"]
