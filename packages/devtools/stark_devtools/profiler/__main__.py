@@ -41,7 +41,7 @@ async def _demo(root: str, jsonl: str | None) -> None:
 
     manager = CommandsManager()
 
-    @manager.new("play $band:Word")
+    @manager.new("play $band:NLWord")
     async def play_music(band):
         return Response(f"Playing {band}.")
 

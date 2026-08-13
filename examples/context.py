@@ -1,7 +1,7 @@
 import anyio
 from stark import CommandsManager, Response, run
 from stark.core import ResponseHandler
-from stark.core.types import Word
+from stark.core.types import NLWord
 from stark.interfaces.silero import SileroSpeechSynthesizer
 from stark.interfaces.vosk import VoskSpeechRecognizer
 
@@ -21,13 +21,13 @@ def hello_context(**params):
 
 
 @manager.new("bye", hidden=True)
-def bye_context(name: Word, handler: ResponseHandler):
+def bye_context(name: NLWord, handler: ResponseHandler):
     handler.pop_context()
     return Response(f"Bye, {name}!")
 
 
-@manager.new("hello $name:Word")
-def hello(name: Word):
+@manager.new("hello $name:NLWord")
+def hello(name: NLWord):
     text = voice = f"Hello, {name}!"
     return Response(text=text, voice=voice, commands=[hello_context, bye_context], parameters={"name": name})
 

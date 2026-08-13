@@ -51,7 +51,7 @@ Consequence for LLM/embedding processors:
 A parameter value inferred from another command's substring (e.g. `lamp` resolved from `"turn on
 bedroom lamp"` while parsing `lamp brightness`) is already handled correctly by the current data model.
 
-`MatchResult.parameters` stores instantiated `Object` instances — semantic values, not source spans.
+`MatchResult.parameters` stores instantiated `NLObject` instances — semantic values, not source spans.
 The command runner receives `Lamp("bedroom lamp")` and has no knowledge of where in the input that
 value came from. Nothing in the core pipeline tracks or requires per-parameter source spans.
 

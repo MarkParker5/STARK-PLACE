@@ -47,7 +47,7 @@ def _iter_py_files(root: str):
 
 
 def _annotation_names(node: ast.AST) -> list[str]:
-    """Collect bare identifier names used in a type annotation (Word, list[Command], X | None, ...)."""
+    """Collect bare identifier names used in a type annotation (NLWord, list[Command], X | None, ...)."""
     names: list[str] = []
     for sub in ast.walk(node):
         if isinstance(sub, ast.Name):

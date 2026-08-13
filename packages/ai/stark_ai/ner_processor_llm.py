@@ -1,5 +1,5 @@
 """
-LLM-powered NER markup — finds substrings in input corresponding to registered Object types.
+LLM-powered NER markup — finds substrings in input corresponding to registered NLObject types.
 Experimental.
 The use of STARK's built-in options for NER, or any other NER-first ML model is preferred.
 """

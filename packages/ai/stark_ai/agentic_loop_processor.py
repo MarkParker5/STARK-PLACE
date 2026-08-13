@@ -97,7 +97,7 @@ The agentic processor operates outside the pattern-native cornerstones by design
 
   Still applicable:
     - All params guaranteed (cornerstone 3): command tools receive typed arguments from the agent;
-      every declared Object parameter must be present in the call (None if not provided). The tool
+      every declared NLObject parameter must be present in the call (None if not provided). The tool
       wrapper enforces this before invoking the command runner.
     - Chain short-circuit (cornerstone 6): this processor returns [] if the agent decides the input
       is out of scope, allowing any downstream processor to handle it.
@@ -319,28 +319,28 @@ async def respond(
 
 
 def _collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
-    from stark.core.types import Object
+    from stark.core.types import NLObject
 
     seen: set[str] = set()
     result: list[TypeInfo] = []
     for cmd in commands:
         # inspect.get_annotations is PEP 563-safe (handles `from __future__ import annotations`)
         for _, param_type in inspect.get_annotations(cmd._runner, eval_str=True).items():
-            if inspect.isclass(param_type) and issubclass(param_type, Object) and param_type.__name__ not in seen:
+            if inspect.isclass(param_type) and issubclass(param_type, NLObject) and param_type.__name__ not in seen:
                 seen.add(param_type.__name__)
                 result.append(TypeInfo.from_type(param_type))
     return result
 
 
 def _instantiate_parameters(cmd: Command, raw: dict[str, Any]) -> dict[str, object]:
-    """Instantiate Object subclass parameters from LLM-provided string values.
-    Every declared Object parameter is present in the result; None if missing or unparseable.
+    """Instantiate NLObject subclass parameters from LLM-provided string values.
+    Every declared NLObject parameter is present in the result; None if missing or unparseable.
     """
-    from stark.core.types import Object
+    from stark.core.types import NLObject
 
     result: dict[str, object] = {}
     for param_name, param_type in inspect.get_annotations(cmd._runner, eval_str=True).items():
-        if not (inspect.isclass(param_type) and issubclass(param_type, Object)):
+        if not (inspect.isclass(param_type) and issubclass(param_type, NLObject)):
             continue
         raw_value = raw.get(param_name)
         if raw_value is None:

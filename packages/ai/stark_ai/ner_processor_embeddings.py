@@ -1,6 +1,6 @@
 """
 Experimental.
-Embeddings-powered NER markup — finds substrings in input corresponding to registered Object types. Uses sliding window to find substrings which might affect performance, but it should be compensated by the speed of generating embeddings relative to LLM output.
+Embeddings-powered NER markup — finds substrings in input corresponding to registered NLObject types. Uses sliding window to find substrings which might affect performance, but it should be compensated by the speed of generating embeddings relative to LLM output.
 The use of STARK's built-in options for NER, or any other NER-first ML model is preferred.
 """
 

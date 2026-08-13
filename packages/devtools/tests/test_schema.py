@@ -12,7 +12,7 @@ def test_event_roundtrip():
     e = ProfileEvent(
         trace_id="t1", seq=3, t_ns=123, phase=CALL, symbol="PatternParser.match",
         module="core/parsing.py", depth=2, thread=42, dur_ns=None,
-        data={"pattern": "play $band:Word", "string": "play Metallica"},
+        data={"pattern": "play $band:NLWord", "string": "play Metallica"},
         call_id=140234,
     )
     d = e.to_dict()

@@ -123,14 +123,14 @@ async def _inject_recognized_entities(ctx) -> str:
 
 
 def _collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
-    """Collect TypeInfo for all unique Object subclass parameter types across commands."""
-    from stark.core.types import Object
+    """Collect TypeInfo for all unique NLObject subclass parameter types across commands."""
+    from stark.core.types import NLObject
 
     seen: set[str] = set()
     result: list[TypeInfo] = []
     for cmd in commands:
         for _, param_type in cmd._runner.__annotations__.items():
-            if inspect.isclass(param_type) and issubclass(param_type, Object) and param_type.__name__ not in seen:
+            if inspect.isclass(param_type) and issubclass(param_type, NLObject) and param_type.__name__ not in seen:
                 seen.add(param_type.__name__)
                 result.append(TypeInfo.from_type(param_type))
     return result
@@ -138,16 +138,16 @@ def _collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
 
 def _instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) -> dict[str, object]:
     """
-    Instantiate Object subclasses from LLM-extracted string values.
+    Instantiate NLObject subclasses from LLM-extracted string values.
     Bypasses PatternParser / ObjectParser / did_parse — the LLM already produced clean values.
-    Every declared Object parameter is present in the result; None if not parsed.
+    Every declared NLObject parameter is present in the result; None if not parsed.
     """
-    from stark.core.types import Object
+    from stark.core.types import NLObject
 
     parsed_by_name = {p.name: p.value for p in parsed_params}
     result: dict[str, object] = {}
     for param_name, param_type in cmd._runner.__annotations__.items():
-        if not (inspect.isclass(param_type) and issubclass(param_type, Object)):
+        if not (inspect.isclass(param_type) and issubclass(param_type, NLObject)):
             continue
         if param_name not in parsed_by_name:
             result[param_name] = None

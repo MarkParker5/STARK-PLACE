@@ -90,24 +90,24 @@ _DEEP_TYPES = None
 
 
 def _deep_types():
-    """Nested custom Object types so the Matching page can show a param→param→param recursion:
-    Album.pattern contains $genre:Genre, and Genre.pattern contains $name:Word (a leaf regex)."""
+    """Nested custom NLObject types so the Matching page can show a param→param→param recursion:
+    Album.pattern contains $genre:Genre, and Genre.pattern contains $name:NLWord (a leaf regex)."""
     global _DEEP_TYPES
     if _DEEP_TYPES is not None:
         return _DEEP_TYPES
-    from stark.core.types.object import Object
+    from stark.core.types.object import NLObject
     from stark.core.patterns.pattern import Pattern
     from stark.general.classproperty import classproperty
 
-    class Genre(Object):
+    class Genre(NLObject):
         @classproperty
         def pattern(cls):
-            return Pattern("$name:Word")
+            return Pattern("$name:NLWord")
 
-    class Album(Object):
+    class Album(NLObject):
         @classproperty
         def pattern(cls):
-            return Pattern("$genre:Genre by $artist:Word")
+            return Pattern("$genre:Genre by $artist:NLWord")
 
     _DEEP_TYPES = (Genre, Album)
     return _DEEP_TYPES
@@ -125,7 +125,7 @@ def _demo_manager():
     async def stop_music():
         return Response("Stopped.")
 
-    # deep recursive parse: recommend → $album:Album → $genre:Genre → $name:Word (4 levels)
+    # deep recursive parse: recommend → $album:Album → $genre:Genre → $name:NLWord (4 levels)
     @manager.new("recommend $album:Album")
     async def recommend(album):
         await anyio.sleep(0.03)
@@ -133,7 +133,7 @@ def _demo_manager():
 
     # commands await a little "work" so those dispatched together genuinely run in parallel on the
     # event loop (their call/response steps overlap in time, visible on the timeline).
-    @manager.new("play $band:Word")
+    @manager.new("play $band:NLWord")
     async def play_music(band):
         await anyio.sleep(0.03)
         # returning `commands` pushes a music context -> grows the context tree
@@ -149,28 +149,28 @@ def _demo_manager():
         await anyio.sleep(0.03)
         return Response("It's 5 o'clock.")
 
-    @manager.new("weather in $city:Word")
+    @manager.new("weather in $city:NLWord")
     async def weather(city):
         await anyio.sleep(0.03)
         return Response(f"It's sunny in {city}.")
 
-    @manager.new("hello $name:Word")
+    @manager.new("hello $name:NLWord")
     async def hello(name):
         await anyio.sleep(0.03)
         return Response(f"Hello, {name}!")
 
-    @manager.new("volume $level:Word percent")
+    @manager.new("volume $level:NLWord percent")
     async def volume(level):
         await anyio.sleep(0.03)
         return Response(f"Volume {level}%.")
 
-    # a String-typed parameter exercises a DIFFERENT Object parser than Word (greedy multi-word)
-    @manager.new("note $text:String")
+    # a NLString-typed parameter exercises a DIFFERENT NLObject parser than NLWord (greedy multi-word)
+    @manager.new("note $text:NLString")
     async def note(text):
         await anyio.sleep(0.03)
         return Response(f"Noted: {text}.")
 
-    @manager.new("set a timer for $dur:Word")
+    @manager.new("set a timer for $dur:NLWord")
     async def set_timer(dur):
         # background command: a long-running generator that emits SEVERAL responses over time —
         # each a separate step later on the timeline, running in parallel with the rest of the
@@ -191,8 +191,8 @@ CASES: list[dict] = [
     {"id": "context", "label": "Context push (music)", "text": "play metallica"},
     {"id": "simple", "label": "Single command", "text": "what time is it"},
     {"id": "fallback", "label": "Fallback (no match)", "text": "do a barrel roll"},
-    {"id": "string", "label": "String parser (multi-word)", "text": "note buy milk and eggs"},
-    {"id": "deep", "label": "Deep recursive parse (Album→Genre→Word)", "text": "recommend rock by radiohead"},
+    {"id": "string", "label": "NLString parser (multi-word)", "text": "note buy milk and eggs"},
+    {"id": "deep", "label": "Deep recursive parse (Album→Genre→NLWord)", "text": "recommend rock by radiohead"},
     {"id": "absolute", "label": "Everything (bg + delayed)", "text": "wether in paris play metalica set a timer for five and tern off the kichen lites"},
 ]
 
@@ -228,7 +228,7 @@ def run_trace(utterance: str, manager=None) -> list[ProfileEvent]:
         with profile() as session:
             async with asyncer.create_task_group() as task_group:
                 context = CommandsContext(task_group=task_group, commands_manager=manager, processors=processors)
-                # register the nested demo types so "recommend $album:Album" resolves Album→Genre→Word
+                # register the nested demo types so "recommend $album:Album" resolves Album→Genre→NLWord
                 for _t in _deep_types():
                     try:
                         context.pattern_parser.register_parameter_type(_t)

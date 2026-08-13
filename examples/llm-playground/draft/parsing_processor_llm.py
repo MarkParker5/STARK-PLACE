@@ -80,14 +80,14 @@ async def parse_parameters(cmd: Command, substring: str) -> dict[str, object]:
 
 
 def collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
-    """Collect TypeInfo for all unique Object subclass parameter types across commands."""
-    from stark.core.types import Object
+    """Collect TypeInfo for all unique NLObject subclass parameter types across commands."""
+    from stark.core.types import NLObject
 
     seen: set[str] = set()
     type_infos: list[TypeInfo] = []
     for cmd in commands:
         for param_name, param_type in cmd._runner.__annotations__.items():
-            if inspect.isclass(param_type) and issubclass(param_type, Object) and param_type.__name__ not in seen:
+            if inspect.isclass(param_type) and issubclass(param_type, NLObject) and param_type.__name__ not in seen:
                 seen.add(param_type.__name__)
                 type_infos.append(TypeInfo.from_type(param_type))
     return type_infos
@@ -95,16 +95,16 @@ def collect_type_infos(commands: list[Command]) -> list[TypeInfo]:
 
 def instantiate_parameters(cmd: Command, parsed_params: list[ParsedParameter]) -> dict[str, object]:
     """
-    Directly instantiate Object subclasses from LLM-extracted string values.
+    Directly instantiate NLObject subclasses from LLM-extracted string values.
     Bypasses PatternParser / ObjectParser / did_parse entirely — the LLM already gave us clean values.
     """
-    from stark.core.types import Object
+    from stark.core.types import NLObject
 
     parsed_by_name = {p.name: p.value for p in parsed_params}
     result: dict[str, object] = {}
 
     for param_name, param_type in cmd._runner.__annotations__.items():
-        if not (inspect.isclass(param_type) and issubclass(param_type, Object)):
+        if not (inspect.isclass(param_type) and issubclass(param_type, NLObject)):
             continue
         if param_name not in parsed_by_name:
             result[param_name] = None

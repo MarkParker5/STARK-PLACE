@@ -3,7 +3,7 @@
 
 Agentic fallback processor — when no earlier processor matched any command, hand off to a 3rd-party agent.
 
-In STARK, a processor's job is to select which command to execute, not to execute logic itself. Actions live in commands. So a fallback agent can't run directly inside a processor — instead, it must return a command that wraps the agent call. The fallback processor returns that command directly by name, bypassing pattern matching entirely. The command itself can be hidden (fallback-only) or public with a real pattern (e.g. "okay ai, $request:String") so users can also invoke it explicitly — the fallback mechanism works the same either way.
+In STARK, a processor's job is to select which command to execute, not to execute logic itself. Actions live in commands. So a fallback agent can't run directly inside a processor — instead, it must return a command that wraps the agent call. The fallback processor returns that command directly by name, bypassing pattern matching entirely. The command itself can be hidden (fallback-only) or public with a real pattern (e.g. "okay ai, $request:NLString") so users can also invoke it explicitly — the fallback mechanism works the same either way.
 
 Placement: last in the processor chain. Relies on chain short-circuit (cornerstone 6) — it is only reached if every preceding processor returned empty results.
 

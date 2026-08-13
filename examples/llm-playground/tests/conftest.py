@@ -45,14 +45,14 @@ from stark.core.commands_context_processor import CommandsContextLayer
 from stark.core.commands_manager import CommandsManager
 from stark.core.parsing import ObjectType
 from stark.core.patterns.pattern import Pattern
-from stark.core.types.object import Object
+from stark.core.types.object import NLObject
 from stark.general.classproperty import classproperty
 from stark.general.dependencies import DependencyManager
 
-# ── Shared Object types for tests ─────────────────────────────────────────────
+# ── Shared NLObject types for tests ─────────────────────────────────────────────
 
 
-class Lamp(Object[str]):
+class Lamp(NLObject[str]):
     """A smart lamp or light fixture that can be controlled by name."""
 
     @classproperty
@@ -60,7 +60,7 @@ class Lamp(Object[str]):
         return Pattern("**")
 
 
-class Song(Object[str]):
+class Song(NLObject[str]):
     """A music track identified by its title."""
 
     @classproperty
@@ -68,7 +68,7 @@ class Song(Object[str]):
         return Pattern("**")
 
 
-class Artist(Object[str]):
+class Artist(NLObject[str]):
     """A music artist or band name."""
 
     @classproperty
@@ -76,7 +76,7 @@ class Artist(Object[str]):
         return Pattern("**")
 
 
-class BrightnessLevel(Object[str]):
+class BrightnessLevel(NLObject[str]):
     """A brightness percentage or named level (e.g. '50%', 'max', 'low')."""
 
     @classproperty
