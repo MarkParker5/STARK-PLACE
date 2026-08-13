@@ -36,11 +36,14 @@ runs:
       shell: bash
       run: |
         set -e
-        # Sync the workspace so deps (e.g. stark-engine) resolve.
+        # Sync only this package's runtime deps (per-package isolation). The workspace
+        # `dev` group lives on the root project, not the member, so pytest can't come from
+        # `--group dev` here; inject the test tools ephemerally with `--with` instead.
         uv sync --package "${{ inputs.package }}"
         # Run only this package's tests; "no tests collected" (pytest exit 5) = pass.
         set +e
-        uv run --package "${{ inputs.package }}" pytest "${{ inputs.dir }}" -q
+        uv run --with pytest --with pytest-asyncio \
+          --package "${{ inputs.package }}" pytest "${{ inputs.dir }}" -q
         code=$?
         set -e
         if [ "$code" -ne 0 ] && [ "$code" -ne 5 ]; then exit "$code"; fi

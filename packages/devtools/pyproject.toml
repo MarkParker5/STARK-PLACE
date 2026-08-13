@@ -33,3 +33,7 @@ exclude = [
     "stark_devtools/visualizer/index.html",
     "**/*.tsbuildinfo",
 ]
+
+# Async tests are plain `async def` (no per-test marker); run them under asyncio auto mode.
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
