@@ -13,8 +13,11 @@ inputs:
     description: Path to the package (contains pyproject.toml). Default repo root.
     default: "."
   python-version:
-    description: Python to test/build against.
-    default: "3.11"
+    description: >
+      Python to test/build against. Must satisfy the strictest workspace member:
+      `uv sync --package X` resolves the whole workspace, and stark-devtools
+      requires >=3.12 (PEP 669). 3.12 is compatible with every package.
+    default: "3.12"
 
 outputs:
   wheel:

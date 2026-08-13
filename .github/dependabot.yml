@@ -1,22 +1,75 @@
 version: 2
+
+# STARK-PLACE is a uv workspace: a single root `uv.lock` covers every packages/*
+# member, so there is exactly one lockfile. Dependabot's `uv` ecosystem operates on
+# that lock — pointing `uv` at a package subdir would fail (no per-member lock exists).
+#
+# To still get *per-package* update streams (the published constraints downstream
+# users actually install), we combine two ecosystems:
+#   • one root `uv` entry  -> keeps uv.lock (transitive + dev-group deps) reproducible.
+#   • one `pip` entry per packages/* -> reads that package's PEP 621
+#     [project.dependencies] and opens PRs that bump ITS OWN pyproject.toml, isolated
+#     from the other packages. This is the true "per-package" granularity.
+#
+# Note: `pip` version-update PRs need a version specifier to raise. Deps pinned with a
+# bound (e.g. stark-engine>=4.5,<5) get version PRs; bare deps (numpy, httpx, …) only
+# receive *security* PRs (enable "Dependabot security updates" in repo settings). Add
+# bounds to those deps if you want proactive version bumps too.
+
 updates:
-  # uv workspace — the root uv.lock covers every packages/* member's deps,
-  # so one entry at the root keeps all distributions updated. PRs land on develop.
+  # --- workspace lock (transitive + dev tooling) ---
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 10
+    labels: ["dependencies", "uv-lock"]
     groups:
-      uv-minor-patch:
+      uv-lock-minor-patch:
         update-types: ["minor", "patch"]
 
+  # --- per-package published constraints ---
+  - package-ecosystem: "pip"
+    directory: "/packages/ai"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "pkg:stark-ai"]
+    groups:
+      stark-ai-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/packages/triggers"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "pkg:stark-triggers"]
+    groups:
+      stark-triggers-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/packages/devtools"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "pkg:stark-devtools"]
+    groups:
+      stark-devtools-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- CI actions ---
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    labels: ["dependencies", "github-actions"]
     groups:
       actions:
         patterns: ["*"]
