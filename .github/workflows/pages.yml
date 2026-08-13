@@ -1,0 +1,67 @@
+# Build + deploy the find-links package registry to GitHub Pages.
+#
+# The registry is generated from EVERY wheel asset across all GitHub Releases, so it
+# always reflects what has actually been published. This is the single Pages deployer
+# (release.yml no longer deploys) to avoid concurrent-deployment races. It runs:
+#   • after a "Release packages" run completes (fresh wheels → refresh registry),
+#   • on demand (workflow_dispatch),
+#   • when the generator or find-links template changes on develop.
+name: Deploy registry (Pages)
+
+on:
+  workflow_run:
+    workflows: ["Release packages"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - tools/registry_gen.py
+      - find-links/**
+      - .github/workflows/pages.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Skip if the triggering release failed; always run for dispatch/push.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dump all release wheels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Every wheel asset across all releases -> assets.json for the generator.
+          # --jq streams one JSON object per line; collect them into a list.
+          gh api --paginate repos/${{ github.repository }}/releases \
+            --jq '.[].assets[] | select(.name|endswith(".whl")) | {name, browser_download_url}' \
+            | python3 -c "import sys,json; json.dump([json.loads(l) for l in sys.stdin if l.strip()], open('assets.json','w'))"
+
+      - name: Generate registry
+        run: |
+          python3 tools/registry_gen.py \
+            --assets assets.json \
+            --out site/index.html \
+            --find-links-url "https://markparker5.github.io/STARK-PLACE/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

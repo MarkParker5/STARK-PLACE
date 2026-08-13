@@ -1,0 +1,55 @@
+# Per-package test CI for the STARK-PLACE monorepo.
+#
+# Each distribution is tested + built in its own matrix leg (fail-fast:false), so one
+# package's failure never hides another's. The `tests-passed` gate aggregates the legs
+# into a single required check — that's what branch protection requires and what
+# Dependabot auto-merge waits on (a per-package Dependabot PR still runs every leg).
+name: Tests
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop, master]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: stark-ai, dir: packages/ai }
+          - { package: stark-triggers, dir: packages/triggers }
+          - { package: stark-devtools, dir: packages/devtools }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test + build ${{ matrix.package }}
+        uses: ./.github/actions/build-package
+        with:
+          package: ${{ matrix.package }}
+          dir: ${{ matrix.dir }}
+
+  # Single required check for branch protection / auto-merge: green only if every
+  # package leg succeeded (a skipped or failed leg fails the gate).
+  tests-passed:
+    name: tests-passed
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all package legs passed
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "One or more package test legs did not succeed: ${{ needs.test.result }}"
+            exit 1
+          fi
+          echo "All package test legs passed."
