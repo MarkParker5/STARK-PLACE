@@ -7,7 +7,7 @@ name = "stark-triggers"
 version = "0.1.0"
 description = "S.T.A.R.K. input triggers — keyboard hotkey and Porcupine wakeword."
 requires-python = ">=3.10"
-license = { text = "CC-BY-NC-SA-4.0" }
+license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
 keywords = ["stark", "stark-place", "wakeword", "porcupine", "voice-assistant"]
 dependencies = [

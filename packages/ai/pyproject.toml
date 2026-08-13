@@ -7,7 +7,7 @@ name = "stark-ai"
 version = "0.1.0"
 description = "LLM processors for S.T.A.R.K. — agentic loop, structured & search-parsing, LLM/embedding NER, fallback agent."
 requires-python = ">=3.10"
-license = { text = "CC-BY-NC-SA-4.0" }
+license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
 keywords = ["stark", "stark-place", "llm", "nlp", "voice-assistant"]
 dependencies = [
