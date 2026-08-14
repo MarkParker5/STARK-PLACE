@@ -20,7 +20,7 @@ Payloads (input + output):
   A small `EXTRACTORS` table gives clean, structured payloads for the meaningful engine frames
   (process_string, the processors, PatternParser.match, run_command, respond, Response, ...);
   everything else falls back to a generic structured capture. A `_ser` serializer understands
-  STARK's own types (MatchResult, SearchResult, Response, Correction, Object, ...).
+  STARK's own types (MatchResult, SearchResult, Response, Correction, NLObject, ...).
 
 Safety:
   * a thread-local RE-ENTRANCY GUARD makes the callbacks ignore any stark frames triggered by
@@ -79,7 +79,7 @@ def _ser(v: Any, _depth: int = 0) -> Any:
             return v
         if isinstance(v, str):
             return _short(v, 120)
-        if isinstance(v, type):  # a class passed as an argument (e.g. object_type=Word)
+        if isinstance(v, type):  # a class passed as an argument (e.g. object_type=NLWord)
             return v.__name__
         # never consume a lazy result — that would change engine behaviour
         if isinstance(v, (types.GeneratorType, map, filter, zip)) or (
@@ -136,7 +136,7 @@ def _ser(v: Any, _depth: int = 0) -> Any:
             return getattr(v, "_origin", str(v))
 
         mod = getattr(type(v), "__module__", "") or ""
-        if mod.startswith("stark") and hasattr(v, "value"):  # an Object subclass (Word, String, ...)
+        if mod.startswith("stark") and hasattr(v, "value"):  # an NLObject subclass (NLWord, NLString, ...)
             return {"type": name, "value": _ser(getattr(v, "value"), _depth + 1)}
 
         return _short(str(v))
@@ -326,7 +326,7 @@ async def _demo(root: str, jsonl: str | None) -> None:
 
     manager = CommandsManager()
 
-    @manager.new("play $band:Word")
+    @manager.new("play $band:NLWord")
     async def play_music(band):
         return Response(f"Playing {band}.")
 

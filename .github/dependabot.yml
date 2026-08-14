@@ -5,16 +5,21 @@ version: 2
 # that lock — pointing `uv` at a package subdir would fail (no per-member lock exists).
 #
 # To still get *per-package* update streams (the published constraints downstream
-# users actually install), we combine two ecosystems:
+# users actually install), we combine ecosystems:
 #   • one root `uv` entry  -> keeps uv.lock (transitive + dev-group deps) reproducible.
 #   • one `pip` entry per packages/* -> reads that package's PEP 621
 #     [project.dependencies] and opens PRs that bump ITS OWN pyproject.toml, isolated
-#     from the other packages. This is the true "per-package" granularity.
+#     from the other packages.
+#   • one `npm` entry for the devtools visualizer front-end.
+#
+# Every entry sets a package-scoped commit-message prefix, so the target package is
+# visible right in the PR TITLE (e.g. "deps(stark-ai): bump numpy …"), plus a matching
+# `pkg:*` label. Grouped minor/patch to keep PR volume down.
 #
 # Note: `pip` version-update PRs need a version specifier to raise. Deps pinned with a
 # bound (e.g. stark-engine>=4.5,<5) get version PRs; bare deps (numpy, httpx, …) only
-# receive *security* PRs (enable "Dependabot security updates" in repo settings). Add
-# bounds to those deps if you want proactive version bumps too.
+# receive *security* PRs (Dependabot security updates are enabled in repo settings).
+# Add bounds to those deps if you want proactive version bumps too.
 
 updates:
   # --- workspace lock (transitive + dev tooling) ---
@@ -24,9 +29,11 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 10
-    labels: ["dependencies", "uv-lock"]
+    commit-message:
+      prefix: "deps(workspace)"
+    labels: ["dependencies", "scope:workspace"]
     groups:
-      uv-lock-minor-patch:
+      workspace-minor-patch:
         update-types: ["minor", "patch"]
 
   # --- per-package published constraints ---
@@ -36,6 +43,8 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(stark-ai)"
     labels: ["dependencies", "pkg:stark-ai"]
     groups:
       stark-ai-minor-patch:
@@ -47,6 +56,8 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(stark-triggers)"
     labels: ["dependencies", "pkg:stark-triggers"]
     groups:
       stark-triggers-minor-patch:
@@ -58,9 +69,25 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(stark-devtools)"
     labels: ["dependencies", "pkg:stark-devtools"]
     groups:
       stark-devtools-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- devtools visualizer front-end (part of stark-devtools) ---
+  - package-ecosystem: "npm"
+    directory: "/packages/devtools/stark_devtools/visualizer"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(stark-devtools-ui)"
+    labels: ["dependencies", "pkg:stark-devtools", "scope:visualizer"]
+    groups:
+      stark-devtools-ui-minor-patch:
         update-types: ["minor", "patch"]
 
   # --- CI actions ---
@@ -69,7 +96,9 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "develop"
-    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "ci(actions)"
+    labels: ["dependencies", "scope:github-actions"]
     groups:
       actions:
         patterns: ["*"]

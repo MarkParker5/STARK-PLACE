@@ -10,11 +10,11 @@ def make_demo_manager(sync_play: bool = False) -> CommandsManager:
     manager = CommandsManager()
 
     if sync_play:
-        @manager.new("play $band:Word")
+        @manager.new("play $band:NLWord")
         def play_music(band):  # sync -> runs via asyncify in a worker thread
             return Response(f"Playing {band}.")
     else:
-        @manager.new("play $band:Word")
+        @manager.new("play $band:NLWord")
         async def play_music(band):
             return Response(f"Playing {band}.")
 

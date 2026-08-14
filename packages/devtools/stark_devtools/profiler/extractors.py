@@ -1,7 +1,7 @@
 """Payload extraction for the STARK profiler.
 
 `serialize` turns any STARK value into a compact, JSON-friendly structure — it understands the
-engine's own types (MatchResult, SearchResult, Response, Correction, Object subclasses, ...) and is
+engine's own types (MatchResult, SearchResult, Response, Correction, NLObject subclasses, ...) and is
 defensive (never raises), depth/breadth-limited, and NEVER consumes a generator/iterator (doing so
 would change engine behaviour, e.g. Dictionary.search_in_sentence yields lazily).
 
@@ -27,7 +27,7 @@ def serialize(v: Any, _depth: int = 0) -> Any:
             return v
         if isinstance(v, str):
             return _short(v)
-        if isinstance(v, type):  # a class passed as an argument (e.g. object_type=Word)
+        if isinstance(v, type):  # a class passed as an argument (e.g. object_type=NLWord)
             return v.__name__
         # never consume a lazy result — that would change engine behaviour
         if isinstance(v, (types.GeneratorType, map, filter, zip)) or (
@@ -84,7 +84,7 @@ def serialize(v: Any, _depth: int = 0) -> Any:
             return getattr(v, "_origin", str(v))
 
         mod = getattr(type(v), "__module__", "") or ""
-        if mod.startswith("stark") and hasattr(v, "value"):  # an Object subclass (Word, String, ...)
+        if mod.startswith("stark") and hasattr(v, "value"):  # an NLObject subclass (NLWord, NLString, ...)
             return {"type": name, "value": serialize(getattr(v, "value"), _depth + 1)}
 
         return _short(str(v))

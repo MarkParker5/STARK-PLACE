@@ -2,7 +2,7 @@
 Tests for AgenticLoopProcessor and AgenticLoopSupervisor.
 
 Cornerstones verified (agentic mode supersedes several — see CORNERSTONES.md §agentic):
-  3. Parameters guaranteed: command tool wrappers must supply every declared Object param (None fallback).
+  3. Parameters guaranteed: command tool wrappers must supply every declared NLObject param (None fallback).
   6. Chain short-circuit: non-empty result stops the chain; [] if agent decides out-of-scope.
 
 Superseded in agentic mode (verified not to apply, or handled internally):
@@ -324,7 +324,7 @@ async def test_transient_result_span_covers_full_input():
 async def test_command_tool_wrapper_fills_none_for_missing_object_params():
     """
     Cornerstone 3: when the agent calls a command tool without providing all
-    Object parameters, the wrapper must supply None for each missing key before
+    NLObject parameters, the wrapper must supply None for each missing key before
     invoking the command runner — to avoid KeyError at call time.
     """
     received_params: dict = {}
@@ -349,7 +349,7 @@ async def test_command_tool_wrapper_fills_none_for_missing_object_params():
 
 async def test_command_tool_wrapper_passes_provided_object_params():
     """
-    Cornerstone 3: when the agent provides Object parameter values, they must
+    Cornerstone 3: when the agent provides NLObject parameter values, they must
     reach the command runner intact.
     """
     received_params: dict = {}

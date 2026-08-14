@@ -8,11 +8,11 @@ name = "stark-devtools"
 version = "0.1.0"
 description = "Dev tools for S.T.A.R.K. — sys.monitoring profiler + web visualizer (replay, dashboard, wiring, brain)."
 requires-python = ">=3.12"        # profiler uses sys.monitoring (PEP 669, 3.12+)
-license = { text = "CC-BY-NC-SA-4.0" }
+license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
 keywords = ["stark", "stark-place", "profiler", "visualizer", "devtools"]
 dependencies = [
-    "stark-engine>=4.5,<5",
+    "stark-engine>=4.6,<5",
 ]
 
 [build-system]
