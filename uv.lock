@@ -2259,7 +2259,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-ai" },
-    { name = "stark-engine", specifier = ">=4.5,<5" },
+    { name = "stark-engine", specifier = ">=4.6,<5" },
 ]
 
 [[package]]
@@ -2271,20 +2271,21 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "stark-engine", specifier = ">=4.5,<5" }]
+requires-dist = [{ name = "stark-engine", specifier = ">=4.6,<5" }]
 
 [[package]]
 name = "stark-engine"
-version = "4.5.5"
+version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "asyncer" },
+    { name = "numpy" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/f4/659f2f823e1d195ac98f1fff90b9a612db5dc0895f5288fe18cad592e74f/stark_engine-4.5.5.tar.gz", hash = "sha256:0f7d9a260d8ad3d16934d8ed6206b80d3dcf8c944c6b607bb54c95208f9bdc53", size = 71931, upload-time = "2026-08-12T21:35:00.437Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/02/9136f03ee6e25fe1d996c9538bdaa0f8fe615d74127e5d3c08c37cac17b0/stark_engine-4.6.0.tar.gz", hash = "sha256:8703684c84e49c9cbd5399c94501def49ea7bfce9f18dbe1081f10a898e41335", size = 71912, upload-time = "2026-08-14T01:15:37.581Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/fd/317094bcb8babf01057497a6b305914ffba2d1aa780ce64c4c7d7709db30/stark_engine-4.5.5-py3-none-any.whl", hash = "sha256:116623c084446229ffda898018dec88794e148513df1ceb2a59cbe172918778e", size = 93790, upload-time = "2026-08-12T21:34:59.293Z" },
+    { url = "https://files.pythonhosted.org/packages/79/32/f0da132572e430262c9a4d8364f015c3aa8ec395c60e9e2f15d2c9fe2b4d/stark_engine-4.6.0-py3-none-any.whl", hash = "sha256:6fe24f01256958cc4c66b9c28526e0f6dd022fd6f68be89f4c5c95d233590ded", size = 93097, upload-time = "2026-08-14T01:15:36.585Z" },
 ]
 
 [[package]]

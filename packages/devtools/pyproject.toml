@@ -12,7 +12,7 @@ license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
 keywords = ["stark", "stark-place", "profiler", "visualizer", "devtools"]
 dependencies = [
-    "stark-engine>=4.5,<5",
+    "stark-engine>=4.6,<5",
 ]
 
 [build-system]
