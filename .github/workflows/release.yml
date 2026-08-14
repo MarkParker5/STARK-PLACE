@@ -104,5 +104,6 @@ jobs:
           gh release create "${{ matrix.tag }}" \
             --title "${{ matrix.package }} ${{ matrix.version }}" \
             --notes "${{ steps.log.outputs.body }}" \
-            --target "$(git rev-parse HEAD)"
+            --target "$(git rev-parse HEAD)" \
+            --latest=false   # multi-package repo: "Latest" is a single global flag, meaningless here
           gh release upload "${{ matrix.tag }}" dist/*.whl dist/*.tar.gz --clobber
