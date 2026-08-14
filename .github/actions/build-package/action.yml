@@ -66,6 +66,19 @@ runs:
           echo "::endgroup::"
         done
 
+    # Smoke-test any bundled web app (Playwright) so a green front-end dep bump that
+    # still breaks at runtime can't slip through. No-op where there's no config.
+    - name: Web smoke test (if any)
+      shell: bash
+      run: |
+        set -e
+        for cfg in $(find "${{ inputs.dir }}" -name 'playwright.config.*' -not -path '*/node_modules/*'); do
+          d=$(dirname "$cfg")
+          echo "::group::smoke $d"
+          (cd "$d" && npx --yes playwright install --with-deps chromium && CI=1 npm run test:e2e)
+          echo "::endgroup::"
+        done
+
     - name: Build wheel + sdist
       id: build
       shell: bash
