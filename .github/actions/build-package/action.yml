@@ -48,6 +48,24 @@ runs:
         set -e
         if [ "$code" -ne 0 ] && [ "$code" -ne 5 ]; then exit "$code"; fi
 
+    # Build any bundled web asset (e.g. the devtools visualizer) so its dist/ exists
+    # for hatchling to package. dist/ is gitignored, so without this the wheel ships
+    # without the built front-end. No-op for packages that have no package.json.
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Build web assets (if any)
+      shell: bash
+      run: |
+        set -e
+        found=$(find "${{ inputs.dir }}" -name package.json -not -path '*/node_modules/*')
+        for pj in $found; do
+          d=$(dirname "$pj")
+          echo "::group::build $d"
+          (cd "$d" && npm ci && npm run build)
+          echo "::endgroup::"
+        done
+
     - name: Build wheel + sdist
       id: build
       shell: bash
