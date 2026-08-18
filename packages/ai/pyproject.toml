@@ -11,7 +11,7 @@ license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "Mark Parker", email = "mark@parker-programs.com" }]
 keywords = ["stark", "stark-place", "llm", "nlp", "voice-assistant"]
 dependencies = [
-    "stark-engine>=4.6,<5",
+    "stark-engine>=4.6.1,<5",
     "pydantic-ai",
     "pydantic>=2",
     "numpy",
