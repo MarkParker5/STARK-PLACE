@@ -17,5 +17,5 @@ stark-devtools = { workspace = true }
 dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.21",
-    "mypy>=1.5",
+    "mypy>=2.3.1",
 ]
