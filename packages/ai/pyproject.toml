@@ -13,7 +13,7 @@ keywords = ["stark", "stark-place", "llm", "nlp", "voice-assistant"]
 dependencies = [
     "stark-engine>=4.6.1,<5",
     "pydantic-ai",
-    "pydantic>=2",
+    "pydantic>=2.13.5",
     "numpy",
     "httpx",
 ]
