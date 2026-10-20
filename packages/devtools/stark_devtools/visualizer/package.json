@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "d3-force": "^3.0.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "@types/d3-force": "^3.0.10",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
